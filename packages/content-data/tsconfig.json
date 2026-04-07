@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "resolveJsonModule": true,
+    "paths": {
+      "@project-god/shared": ["../shared/src"]
+    },
+    "baseUrl": "."
+  },
+  "include": ["src/**/*"]
+}

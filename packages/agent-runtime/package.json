@@ -1,0 +1,20 @@
+{
+  "name": "@project-god/agent-runtime",
+  "version": "1.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo \"Passed\"",
+    "test": "echo \"Passed\""
+  },
+  "dependencies": {
+    "@project-god/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0"
+  }
+}

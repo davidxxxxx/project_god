@@ -1,0 +1,26 @@
+{
+  "grass": {
+    "displayName": "Grassland",
+    "moveCostMultiplier": 1.0,
+    "passable": true,
+    "fertility": 0.5
+  },
+  "forest": {
+    "displayName": "Forest",
+    "moveCostMultiplier": 1.5,
+    "passable": true,
+    "fertility": 0.3
+  },
+  "water": {
+    "displayName": "Water",
+    "moveCostMultiplier": 99,
+    "passable": false,
+    "fertility": 0
+  },
+  "swamp": {
+    "displayName": "Swamp",
+    "moveCostMultiplier": 3.0,
+    "passable": true,
+    "fertility": 0.1
+  }
+}

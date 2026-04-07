@@ -1,0 +1,16 @@
+{
+  "berry": {
+    "displayName": "Wild Berry",
+    "gatherAmount": 1,
+    "restoresNeed": { "hunger": 20 },
+    "maxQuantity": 10,
+    "regenPerTick": 0.1
+  },
+  "water": {
+    "displayName": "Fresh Water",
+    "gatherAmount": 1,
+    "restoresNeed": { "thirst": 30 },
+    "maxQuantity": -1,
+    "regenPerTick": 0
+  }
+}

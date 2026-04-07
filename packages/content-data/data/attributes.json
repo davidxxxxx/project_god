@@ -1,0 +1,20 @@
+{
+  "intelligence": {
+    "displayName": "Intelligence",
+    "min": 1,
+    "max": 10,
+    "defaultValue": 5
+  },
+  "body": {
+    "displayName": "Body",
+    "min": 1,
+    "max": 10,
+    "defaultValue": 5
+  },
+  "faith": {
+    "displayName": "Faith",
+    "min": 0,
+    "max": 10,
+    "defaultValue": 0
+  }
+}

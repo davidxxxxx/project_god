@@ -1,0 +1,14 @@
+export { createWorld } from "./create-world";
+export type { WorldConfig } from "./create-world";
+export { validateAction } from "./validate";
+export type { ValidationContext } from "./validate";
+export { executeAction } from "./execute";
+export type { ExecutionContext } from "./execute";
+export { tickWorld } from "./tick";
+export type { TickContext } from "./tick";
+export { decayNeeds, checkDeaths } from "./systems/decay-needs";
+export type { NeedDef, ResourceDef, ActionDef, TerrainDef } from "./content-types";
+export { ScenarioRunner, defaultSurvivalDecision } from "./scenario-runner";
+export type { ScenarioConfig, DecisionFn } from "./scenario-runner";
+export { buildProjection } from "./snapshot";
+export { buildTickMetrics, aggregateMetrics } from "./metrics";

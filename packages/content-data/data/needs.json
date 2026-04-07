@@ -1,0 +1,23 @@
+{
+  "hunger": {
+    "max": 100,
+    "initial": 80,
+    "decayPerTick": 1,
+    "deathThreshold": 0,
+    "criticalThreshold": 25
+  },
+  "thirst": {
+    "max": 100,
+    "initial": 80,
+    "decayPerTick": 2,
+    "deathThreshold": 0,
+    "criticalThreshold": 25
+  },
+  "fatigue": {
+    "max": 100,
+    "initial": 0,
+    "decayPerTick": 0,
+    "deathThreshold": -1,
+    "criticalThreshold": 20
+  }
+}

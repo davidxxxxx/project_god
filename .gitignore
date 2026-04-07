@@ -1,0 +1,23 @@
+# TypeScript build artifacts
+*.tsbuildinfo
+dist/
+
+# Environment & Python
+venv/
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+dist/
+.env
+
+# Save outputs
+save_data/
+*.dat
+*.sav
+
+# IDE specific
+.vscode/
+.idea/
+.DS_Store

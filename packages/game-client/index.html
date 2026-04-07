@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project God — Debug Panel</title>
+  <link rel="stylesheet" href="/src/styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Top Bar -->
+    <header id="top-bar">
+      <div class="info">
+        <span id="tick-display">Tick: 0</span>
+        <span id="seed-display">Seed: —</span>
+        <span id="status-display" class="status-badge">READY</span>
+      </div>
+      <div class="controls">
+        <button id="btn-step" title="Step 1 tick">⏭ Step</button>
+        <button id="btn-run" title="Run continuously">▶ Run</button>
+        <button id="btn-pause" title="Pause" disabled>⏸ Pause</button>
+        <button id="btn-reset" title="Reset scenario">↺ Reset</button>
+        <label class="speed-label">Speed
+          <input id="speed-slider" type="range" min="1" max="20" value="5">
+        </label>
+      </div>
+    </header>
+
+    <!-- Main Grid -->
+    <main id="main-grid">
+      <!-- Left: Agent List -->
+      <aside id="agent-panel">
+        <h2>Agents</h2>
+        <div id="agent-list"></div>
+      </aside>
+
+      <!-- Center: Map -->
+      <section id="map-panel">
+        <h2>World Map</h2>
+        <div id="map-grid"></div>
+      </section>
+
+      <!-- Right: Event Log -->
+      <aside id="event-panel">
+        <h2>Event Log</h2>
+        <div id="event-filters"></div>
+        <div id="event-log"></div>
+      </aside>
+    </main>
+
+    <!-- Bottom: Selected Agent Details + Metrics -->
+    <footer id="bottom-bar">
+      <div id="agent-detail">
+        <span class="detail-label">Select an agent to view details</span>
+      </div>
+      <div id="metrics-panel">
+        <span id="metric-alive">Alive: —</span>
+        <span id="metric-dead">Dead: —</span>
+        <span id="metric-rejected">Rejected: —</span>
+        <span id="metric-gathers">Gathers: —</span>
+        <span id="metric-eats">Eats: —</span>
+        <span id="metric-drinks">Drinks: —</span>
+      </div>
+    </footer>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

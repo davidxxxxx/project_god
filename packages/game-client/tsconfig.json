@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "baseUrl": ".",
+    "paths": {
+      "@project-god/shared": ["../shared/src"],
+      "@project-god/core-sim": ["../core-sim/src"]
+    }
+  },
+  "include": ["src/**/*"]
+}

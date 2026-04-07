@@ -1,0 +1,7 @@
+{
+  "idle": { "range": 0 },
+  "move": { "range": 1 },
+  "gather": { "range": 1 },
+  "eat": { "requiresInventory": "berry" },
+  "drink": { "requiresInventory": "water" }
+}
