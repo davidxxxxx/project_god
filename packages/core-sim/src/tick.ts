@@ -111,6 +111,7 @@ export function tickWorld(
       skills: ctx.skills,
       technologies: ctx.technologies ?? {},
       structures: ctx.structures,
+      lifecycle: ctx.lifecycle,
     }));
   }
 

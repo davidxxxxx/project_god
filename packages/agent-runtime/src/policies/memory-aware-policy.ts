@@ -14,11 +14,11 @@
  *   2. Inventory full → consume to free space
  *   2.5. Exposure crisis → seek/build shelter
  *   2.6. DUSK SHELTER SEEKING (MVP-02X) — at dusk, go to hut > lean_to > fire_pit
+ *   2.7. MAINTAIN FIRE (MVP-02Z) — refuel low fire pit, higher priority than building new
  *   2.8. Prayer in crisis
  *   2.9. Shrine / ritual
  *   3. Consume if pressure warrants
  *   3.2. COOK at fire pit if have raw food + near fire (MVP-02X)
- *   3.3. ADD FUEL to fire pit if fire is low + have wood (MVP-02X)
  *   3.5. Build structures (with material costs)
  *   3.8. PREPARE BUILD MATERIALS (MVP-02Z) — gather wood/stone/grass for planned build
  *   4. Seek food/water resources (gather berry/water)
@@ -205,11 +205,49 @@ export function memoryAwarePolicy(
     }
   }
 
+  // ── Lookup nearest fire pit (shared across priorities 2.7, 3.2) ──
+  const nearbyFire = snapshot.nearbyActiveStructures
+    .filter((s) => s.type === "fire_pit")
+    .sort((a, b) => manhattan(self.position, a.position) - manhattan(self.position, b.position))[0];
+
   // ── Priority 2.6: DUSK SHELTER SEEKING (MVP-02X) ──────────
   if (snapshot.timeOfDay === "dusk" && !hasSheltered && !hasHome) {
     // At dusk, agents should head to shelter before night
     const shelterAction = seekShelter(self, actorId, snapshot, "dusk approaching, seeking shelter");
     if (shelterAction) return shelterAction;
+  }
+
+  // ── Priority 2.7: MAINTAIN FIRE (MVP-02Z) ─────────────────
+  // Refuel an existing fire pit before it dies. Higher priority than building new.
+  // Triggered when: nearby fire is low, agent has wood or can quickly get it,
+  // and it's cold/dusk/night.
+  const FIRE_LOW_DURABILITY = 50;
+  if (
+    nearbyFire &&
+    nearbyFire.durability <= FIRE_LOW_DURABILITY &&
+    !isChild &&
+    (snapshot.isCold || snapshot.timeOfDay === "dusk" || snapshot.timeOfDay === "night")
+  ) {
+    const fireDist = manhattan(self.position, nearbyFire.position);
+    if (fireDist <= 1 && hasWood) {
+      // Adjacent + have wood → refuel immediately
+      return { actorId, type: "add_fuel", reason: `[maintain-fire] refueling fire (dur=${nearbyFire.durability})` };
+    }
+    if (fireDist <= 1 && !hasWood) {
+      // Adjacent but no wood → go get wood first
+      const woodAction = seekAndHarvestMaterial(
+        self, actorId, nearbyResources, memorizedResourcePositions,
+        snapshot.semanticResourceLocations, "wood", currentTick
+      );
+      if (woodAction) {
+        return { ...woodAction, reason: `[maintain-fire] getting wood for fire: ${woodAction.reason}` };
+      }
+    }
+    if (fireDist > 1 && fireDist <= 6) {
+      // Not adjacent → walk to fire
+      const step = stepToward(self.position, nearbyFire.position);
+      return { actorId, type: "move", position: step, reason: `[maintain-fire] heading to fire (dur=${nearbyFire.durability}, dist=${fireDist})` };
+    }
   }
 
   // ── Priority 2.8: Prayer when in crisis (MVP-05) ──────────
@@ -311,11 +349,7 @@ export function memoryAwarePolicy(
   }
 
   // ── Priority 3.2: COOK at fire pit (MVP-02X) ─────────────
-  // If near a fire pit and have raw food, cook it for double nutrition
-  const nearbyFire = snapshot.nearbyActiveStructures
-    .filter((s) => s.type === "fire_pit")
-    .sort((a, b) => manhattan(self.position, a.position) - manhattan(self.position, b.position))[0];
-
+  // nearbyFire already computed at priority 2.7 level
   const cookPreference = self.preferences?.["cook"] ?? 0;
   const knownRecipes = self.knownRecipes ?? {};
 
@@ -342,13 +376,7 @@ export function memoryAwarePolicy(
     return { actorId, type: "move", position: step, reason: "heading to fire to cook (preference)" };
   }
 
-  // ── Priority 3.3: ADD FUEL to low fire pit (MVP-02X) ──────
-  // If near a fire pit with low durability and we have wood, refuel it
-  if (nearbyFire && hasWood && manhattan(self.position, nearbyFire.position) <= 1) {
-    if (nearbyFire.durability <= 15) {
-      return { actorId, type: "add_fuel", reason: `adding fuel to fire pit (durability=${nearbyFire.durability})` };
-    }
-  }
+  // NOTE: ADD_FUEL moved to Priority 2.7 (maintain-fire). No more 3.3.
 
   // ── Priority 3.5: Build structures ────────────────────────
   if (buildTarget && hasMaterialsFor(self.inventory, buildTarget) && hungerPressure <= 60 && thirstPressure <= 60) {

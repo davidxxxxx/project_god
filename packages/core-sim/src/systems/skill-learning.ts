@@ -3,10 +3,11 @@
  *
  * Runs after structure tick in the main loop.
  * For each alive entity without a given skill:
- *   1. Check if a nearby entity WITH the skill is present
- *   2. Check if an active structure related to the skill is nearby
- *   3. If both → increment observation counter (stored in entity attributes)
- *   4. If counter >= learnTicks → learn skill, emit SKILL_LEARNED
+ *   1. Check age gate (MVP-02Z): infants can't learn, children limited
+ *   2. Check if a nearby entity WITH the skill is present
+ *   3. Check if an active structure related to the skill is nearby
+ *   4. If both → increment observation counter (stored in entity attributes)
+ *   5. If counter >= learnTicks → learn skill, emit SKILL_LEARNED
  *
  * Also checks tribe-level technology unlock conditions.
  */
@@ -16,7 +17,7 @@ import {
   SkillLearnedEvent, SkillObservedEvent, TechnologyUnlockedEvent,
   manhattan,
 } from "@project-god/shared";
-import type { SkillDef, TechnologyDef, StructureDef } from "../content-types";
+import type { SkillDef, TechnologyDef, StructureDef, LifecycleDef } from "../content-types";
 
 /** Observation range: how close entities must be to observe. */
 const OBSERVATION_RADIUS = 5;
@@ -29,10 +30,42 @@ function obsKey(skillId: string): string {
   return `obs_${skillId}`;
 }
 
+// ── MVP-02Z: Age-gated skill learning ─────────────────────────
+
+/** Default adulthood age if lifecycle config not provided. */
+const DEFAULT_ADULTHOOD_AGE = 15;
+
+/**
+ * Skills that children (age >= 8) can learn via observation.
+ * All other skills require adulthood.
+ */
+const CHILD_LEARNABLE_SKILLS: ReadonlySet<string> = new Set([
+  "cooking",
+]);
+
+/**
+ * Check if an entity is old enough to learn a skill.
+ *
+ * Rules:
+ *   - infant (age < 8): can't learn ANY skill
+ *   - child (age 8 to ADULTHOOD_AGE-1): can learn CHILD_LEARNABLE_SKILLS only
+ *   - adult (age >= ADULTHOOD_AGE): can learn everything
+ */
+function canLearnSkill(entity: EntityState, skillId: string, adulthoodAge: number): boolean {
+  const age = entity.age ?? adulthoodAge; // Gen0 entities with no age are treated as adults
+  const CHILD_LEARNING_MIN_AGE = 8;
+
+  if (age < CHILD_LEARNING_MIN_AGE) return false; // infant: nothing
+  if (age < adulthoodAge) return CHILD_LEARNABLE_SKILLS.has(skillId); // child: limited
+  return true; // adult: all skills
+}
+
 export interface SkillLearningContext {
   skills: Record<string, SkillDef>;
   technologies: Record<string, TechnologyDef>;
   structures?: Record<string, StructureDef>;
+  /** Lifecycle config for age-gating. Optional for backward compat. */
+  lifecycle?: LifecycleDef;
 }
 
 export function tickSkillLearning(
@@ -42,6 +75,7 @@ export function tickSkillLearning(
   const events: SimEvent[] = [];
   const entities = Object.values(world.entities) as EntityState[];
   const aliveEntities = entities.filter((e) => e.alive);
+  const adulthoodAge = ctx.lifecycle?.ADULTHOOD_AGE ?? DEFAULT_ADULTHOOD_AGE;
 
   // Collect active structures for proximity checks
   const activeStructures = world.structures
@@ -58,6 +92,9 @@ export function tickSkillLearning(
     const unskilled = aliveEntities.filter((e) => (e.skills?.[skillId] ?? 0) === 0);
 
     for (const learner of unskilled) {
+      // MVP-02Z: Age gate — skip entities too young for this skill
+      if (!canLearnSkill(learner, skillId, adulthoodAge)) continue;
+
       // Check: is there a skilled entity nearby?
       const hasNearbyTeacher = skilled.some(
         (teacher) => manhattan(learner.position, teacher.position) <= OBSERVATION_RADIUS

@@ -588,6 +588,10 @@ export function updateRecipeObservation(
   const resultEvents: SimEvent[] = [];
   if (!entity.alive) return resultEvents;
 
+  // MVP-02Z: Infants can't learn recipes
+  const RECIPE_LEARNING_MIN_AGE = 8;
+  if (entity.age !== undefined && entity.age < RECIPE_LEARNING_MIN_AGE) return resultEvents;
+
   // Initialize if needed
   if (!entity.knownRecipes) entity.knownRecipes = {};
   if (!entity.recipeObservationProgress) entity.recipeObservationProgress = {};

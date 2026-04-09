@@ -45,7 +45,7 @@ const STRUCTURES = {
   fire_pit: {
     displayName: "Fire Pit",
     requiredItems: { stone: 2, wood: 1 },
-    buildRange: 0, initialDurability: 50, fuelPerTick: 1, effectRadius: 2,
+    buildRange: 0, initialDurability: 150, fuelPerTick: 0.5, effectRadius: 2,
     effects: ["warming"], decayPerTick: 0,
   },
   lean_to: {
@@ -98,9 +98,9 @@ export const GOLDEN_WORLD_CONFIG: WorldConfig = {
   ],
   entityOverrides: [
     // Start agents clustered between berry/water/wood/stone/grass nodes
-    // MVP-02Z: entity_0 = "fire keeper", entity_1 = "shelter builder" (breaks skill deadlock)
+    // MVP-02Z: entity_0 = "fire keeper + cook", entity_1 = "shelter builder" (breaks skill deadlocks)
     { index: 0, needsOverride: { hunger: 80, thirst: 80 }, positionOverride: { x: 6, y: 4 },
-      skillsOverride: { fire_making: 0.5 } },
+      skillsOverride: { fire_making: 0.5, cooking: 0.3 } },
     { index: 1, needsOverride: { hunger: 80, thirst: 80 }, positionOverride: { x: 5, y: 4 },
       skillsOverride: { shelter_building: 0.5 } },
     { index: 2, needsOverride: { hunger: 80, thirst: 80 }, positionOverride: { x: 7, y: 3 } },
