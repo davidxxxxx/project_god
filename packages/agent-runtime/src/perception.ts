@@ -56,6 +56,12 @@ export interface AgentSnapshot {
   tribePriestId?: string;
   /** This entity's role (e.g. "priest"). */
   selfRole?: string;
+  /** Terrain types/costs for adjacent tiles (MVP-02Y). */
+  nearbyTerrain: { position: Vec2; terrain: string; moveCost: number; passable: boolean }[];
+  /** Reference to world tiles for pathfinding. MVP-02Y. */
+  worldTiles?: Record<string, { terrain: string }>;
+  /** Terrain defs for cost lookup. MVP-02Y. */
+  terrainDefs?: Record<string, { moveCostMultiplier: number; passable: boolean }>;
 }
 
 /** Default perception radius in manhattan distance. */
@@ -66,7 +72,8 @@ const DEFAULT_INVENTORY_CAPACITY = 10;
 export function perceive(
   entityId: string,
   world: WorldState,
-  radius: number = PERCEPTION_RADIUS
+  radius: number = PERCEPTION_RADIUS,
+  terrainDefs?: Record<string, { moveCostMultiplier: number; passable: boolean }>
 ): AgentSnapshot {
   const self = world.entities[entityId];
 
@@ -224,6 +231,29 @@ export function perceive(
   }
   const selfRole = self.role;
 
+  // ── MVP-02Y: Nearby terrain for pathfinding ────────────────
+  const nearbyTerrain: AgentSnapshot["nearbyTerrain"] = [];
+  const TERRAIN_SCAN_RADIUS = 2;
+  for (let dy = -TERRAIN_SCAN_RADIUS; dy <= TERRAIN_SCAN_RADIUS; dy++) {
+    for (let dx = -TERRAIN_SCAN_RADIUS; dx <= TERRAIN_SCAN_RADIUS; dx++) {
+      if (dx === 0 && dy === 0) continue;
+      const tx = self.position.x + dx;
+      const ty = self.position.y + dy;
+      const tKey = `${tx},${ty}`;
+      const tile = world.tiles[tKey];
+      if (!tile) continue;
+      const tDef = tile.terrain;
+      // We don't have terrain defs directly, so we store raw terrain type
+      // and let the policy/pathfinder look up cost from terrainDefs
+      nearbyTerrain.push({
+        position: { x: tx, y: ty },
+        terrain: tDef,
+        moveCost: 1, // placeholder, will be resolved by policy
+        passable: true,
+      });
+    }
+  }
+
   return {
     self, nearbyResources, memorizedResourcePositions, nearbyActiveStructures,
     nearbySkilled, selfSkills, nearbyEntities, tribeGatherPoint, sharedResourcePositions,
@@ -231,5 +261,8 @@ export function perceive(
     temperature, timeOfDay, isCold, selfExposure,
     semanticResourceLocations, culturalKnowledge, semanticMemoryCount,
     tribeShrinePosition, tribePriestId, selfRole,
+    nearbyTerrain,
+    worldTiles: world.tiles as any,
+    terrainDefs: terrainDefs as any,
   };
 }

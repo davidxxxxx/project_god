@@ -4,13 +4,67 @@
     "gatherAmount": 1,
     "restoresNeed": { "hunger": 20 },
     "maxQuantity": 10,
-    "regenPerTick": 0.1
+    "regenPerTick": 0.1,
+    "category": "food"
   },
   "water": {
     "displayName": "Fresh Water",
     "gatherAmount": 1,
     "restoresNeed": { "thirst": 30 },
     "maxQuantity": -1,
-    "regenPerTick": 0
+    "regenPerTick": 0,
+    "category": "drink"
+  },
+  "wood": {
+    "displayName": "Wood",
+    "gatherAmount": 1,
+    "restoresNeed": {},
+    "maxQuantity": 8,
+    "regenPerTick": 0.05,
+    "category": "material",
+    "harvestAction": "harvest"
+  },
+  "stone": {
+    "displayName": "Stone",
+    "gatherAmount": 1,
+    "restoresNeed": {},
+    "maxQuantity": 6,
+    "regenPerTick": 0,
+    "category": "material",
+    "harvestAction": "harvest"
+  },
+  "grass": {
+    "displayName": "Grass",
+    "gatherAmount": 2,
+    "restoresNeed": {},
+    "maxQuantity": 12,
+    "regenPerTick": 0.15,
+    "category": "material",
+    "harvestAction": "harvest"
+  },
+  "fiber": {
+    "displayName": "Plant Fiber",
+    "gatherAmount": 1,
+    "restoresNeed": {},
+    "maxQuantity": 8,
+    "regenPerTick": 0.08,
+    "category": "material",
+    "harvestAction": "harvest"
+  },
+  "roast_berry": {
+    "displayName": "Roast Berry",
+    "gatherAmount": 0,
+    "restoresNeed": { "hunger": 40 },
+    "maxQuantity": 0,
+    "regenPerTick": 0,
+    "category": "food"
+  },
+  "boiled_water": {
+    "displayName": "Boiled Water",
+    "gatherAmount": 0,
+    "restoresNeed": { "thirst": 50 },
+    "maxQuantity": 0,
+    "regenPerTick": 0,
+    "category": "drink"
   }
 }

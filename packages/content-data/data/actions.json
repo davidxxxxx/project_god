@@ -2,8 +2,14 @@
   "idle": { "range": 0 },
   "move": { "range": 1 },
   "gather": { "range": 1 },
+  "harvest": { "range": 1 },
   "eat": { "requiresInventory": "berry" },
   "drink": { "requiresInventory": "water" },
+  "cook": { "range": 1, "requiresNearby": "fire_pit" },
+  "add_fuel": { "range": 1, "requiresInventory": "wood", "requiresNearby": "fire_pit" },
+  "build": { "range": 0 },
+  "drop": { "range": 0 },
+  "pray": { "range": 0 },
   "perform_ritual": { "range": 1 },
   "participate_ritual": { "range": 3 }
 }

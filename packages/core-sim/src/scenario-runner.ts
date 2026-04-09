@@ -260,6 +260,7 @@ import {
   updateSocialMemory,
   distillSemanticMemory, decaySemanticMemory,
   teachToCulturalMemory, inheritFromCulturalMemory, decayCulturalMemory,
+  updateRecipeObservation, updatePreferences,
 } from "@project-god/agent-runtime";
 
 /**
@@ -267,10 +268,11 @@ import {
  * Uses episodic memory for resource recall and task tracking.
  */
 export function defaultMemoryDecision(
-  needsConfig: Record<string, { max: number; criticalThreshold: number }>
+  needsConfig: Record<string, { max: number; criticalThreshold: number }>,
+  terrainDefs?: Record<string, { moveCostMultiplier: number; passable: boolean }>
 ): DecisionFn {
   return (entityId: string, world: WorldState): ActionIntent => {
-    const snapshot = perceive(entityId, world);
+    const snapshot = perceive(entityId, world, undefined, terrainDefs);
     return memoryAwarePolicy(snapshot, needsConfig, world.tick);
   };
 }
@@ -300,6 +302,14 @@ export function defaultPostTickMemoryHook(): PostTickHook {
 
       // Semantic decay (MVP-03-B): fade unreinforced knowledge
       decaySemanticMemory(entity, world.tick);
+
+      // Recipe observation learning (MVP-02X): watch nearby cooking
+      const nearbyIds = snapshot.nearbyEntities.map((ne: any) => ne.entityId);
+      const recipeEvents = updateRecipeObservation(entity, enriched, nearbyIds, world.tick);
+      result.events.push(...recipeEvents);
+
+      // Experience-based preferences (MVP-02X): outcome → weight shifts
+      updatePreferences(entity, enriched, world.tick);
 
       // Cultural teaching + inheritance (MVP-03-B)
       if (world.tribes && entity.tribeId) {

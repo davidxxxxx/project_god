@@ -5,6 +5,7 @@ import {
 } from "@project-god/shared";
 import { calculateTemperature, calculateTimeOfDay, DEFAULT_DAY_LENGTH } from "./systems/environment-tick";
 import type { NeedDef, TerrainDef } from "./content-types";
+import { generateMap } from "./map-generator";
 
 export interface WorldConfig {
   seed: number;
@@ -13,6 +14,8 @@ export interface WorldConfig {
   entityCount: number;
   terrain: Record<string, TerrainDef>;
   needs: Record<string, NeedDef>;
+  /** If true, use procedural map generation. MVP-02Y. */
+  useProceduralMap?: boolean;
   resourceNodes?: Array<{
     position: Vec2;
     resourceType: string;
@@ -24,6 +27,8 @@ export interface WorldConfig {
     index: number;
     needsOverride: Partial<Record<string, number>>;
     positionOverride?: Vec2;
+    /** MVP-02Z: Starting skills for this entity. */
+    skillsOverride?: Record<string, number>;
   }>;
 }
 
@@ -32,12 +37,39 @@ export function createWorld(config: WorldConfig): WorldState {
 
   // ── Build tile grid ──────────────────────────────────────
   const tiles: Record<string, TileState> = {};
-  const terrainKeys = Object.keys(config.terrain);
+  let proceduralSpawnCenter: Vec2 | undefined;
+  let proceduralResourceNodes: Array<{
+    position: Vec2;
+    resourceType: string;
+    quantity: number;
+    maxQuantity: number;
+    regenPerTick: number;
+  }> | undefined;
 
-  for (let y = 0; y < config.height; y++) {
-    for (let x = 0; x < config.width; x++) {
-      const id = tileKey(x, y);
-      tiles[id] = { id, position: { x, y }, terrain: rng.pick(terrainKeys), biome: "temperate" };
+  if (config.useProceduralMap) {
+    // MVP-02Y: Procedural map generation
+    const generated = generateMap(config.seed, config.width, config.height);
+    for (const [key, genTile] of Object.entries(generated.tiles)) {
+      const [xStr, yStr] = key.split(",");
+      const x = parseInt(xStr, 10);
+      const y = parseInt(yStr, 10);
+      tiles[key] = {
+        id: key as TileId,
+        position: { x, y },
+        terrain: genTile.terrain,
+        biome: genTile.biome,
+      };
+    }
+    proceduralSpawnCenter = generated.spawnCenter;
+    proceduralResourceNodes = generated.resourceNodes;
+  } else {
+    // Legacy: random terrain per tile
+    const terrainKeys = Object.keys(config.terrain);
+    for (let y = 0; y < config.height; y++) {
+      for (let x = 0; x < config.width; x++) {
+        const id = tileKey(x, y);
+        tiles[id] = { id, position: { x, y }, terrain: rng.pick(terrainKeys), biome: "temperate" };
+      }
     }
   }
 
@@ -55,6 +87,8 @@ export function createWorld(config: WorldConfig): WorldState {
     for (const [needKey, def] of Object.entries(config.needs)) {
       needs[needKey] = def.initial;
     }
+    // MVP-02X: Initialize HP
+    needs.hp = 100;
 
     const override = config.entityOverrides?.find((o: { index: number }) => o.index === i);
     if (override) {
@@ -63,7 +97,25 @@ export function createWorld(config: WorldConfig): WorldState {
       }
     }
 
-    const pos = override?.positionOverride ?? { ...tile.position };
+    // MVP-02Y: If procedural map, cluster entities near spawn center
+    let pos: Vec2;
+    if (override?.positionOverride) {
+      pos = override.positionOverride;
+    } else if (proceduralSpawnCenter) {
+      // Scatter around spawn center (±2 tiles)
+      const sx = proceduralSpawnCenter.x + rng.nextInt(-2, 2);
+      const sy = proceduralSpawnCenter.y + rng.nextInt(-2, 2);
+      // Ensure passable
+      const spawnKey = tileKey(sx, sy);
+      const spawnTile = tiles[spawnKey];
+      if (spawnTile && config.terrain[spawnTile.terrain]?.passable !== false) {
+        pos = { x: sx, y: sy };
+      } else {
+        pos = { ...proceduralSpawnCenter };
+      }
+    } else {
+      pos = { ...tile.position };
+    }
 
     // ── MVP-04: Lifecycle fields for Gen0 ──────────────────
     const sex = rng.next() < 0.5 ? "male" : "female";
@@ -83,24 +135,26 @@ export function createWorld(config: WorldConfig): WorldState {
       sex: sex as any,
       maxAge,
       bornAtTick,
+      // MVP-02Z: Apply starting skills from overrides
+      skills: override?.skillsOverride ? { ...override.skillsOverride } : undefined,
     };
   }
 
   // ── Place resource nodes ─────────────────────────────────
   const resourceNodes: Record<string, ResourceNodeState> = {};
-  if (config.resourceNodes) {
-    config.resourceNodes.forEach((rn, i) => {
-      const id = `rnode_${i}` as ResourceNodeId;
-      resourceNodes[id] = {
-        id,
-        position: rn.position,
-        resourceType: rn.resourceType,
-        quantity: rn.quantity,
-        maxQuantity: rn.maxQuantity,
-        regenPerTick: rn.regenPerTick,
-      };
-    });
-  }
+  const nodeSources = proceduralResourceNodes ?? config.resourceNodes ?? [];
+  nodeSources.forEach((rn, i) => {
+    const id = `rnode_${i}` as ResourceNodeId;
+    resourceNodes[id] = {
+      id,
+      position: rn.position,
+      resourceType: rn.resourceType,
+      quantity: rn.quantity,
+      maxQuantity: rn.maxQuantity,
+      regenPerTick: rn.regenPerTick,
+    };
+  });
+
   // ── Create default tribe (MVP-02-E) ─────────────────────
   const memberIds = Object.keys(entities) as EntityId[];
   const tribes: Record<string, TribeState> = {

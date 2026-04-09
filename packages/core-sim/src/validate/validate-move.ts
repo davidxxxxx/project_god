@@ -1,6 +1,12 @@
 import { ActionIntent, RejectedAction, ValidatedAction, WorldState, chebyshev, tileKey } from "@project-god/shared";
 import type { TerrainDef } from "../content-types";
 
+/**
+ * validate-move.ts — Validates a move action intent.
+ *
+ * MVP-02Y: Checks terrain-based movement cooldown.
+ * If the entity recently moved onto costly terrain, they must wait.
+ */
 export function validateMove(
   intent: ActionIntent,
   world: WorldState,
@@ -10,6 +16,15 @@ export function validateMove(
 
   if (!intent.position) {
     return { kind: "rejected", intent, reason: "Move requires target position" };
+  }
+
+  // MVP-02Y: Terrain movement cooldown — entity must wait after moving onto costly terrain
+  if (entity.moveCooldownUntil && entity.moveCooldownUntil > world.tick) {
+    return {
+      kind: "rejected",
+      intent,
+      reason: `movement cooldown (${entity.moveCooldownUntil - world.tick} ticks remaining)`,
+    };
   }
 
   if (chebyshev(entity.position, intent.position) !== 1) {
@@ -27,5 +42,10 @@ export function validateMove(
     return { kind: "rejected", intent, reason: `Terrain '${tile.terrain}' is impassable` };
   }
 
-  return { kind: "validated", intent, energyCost: 5 * terrainDef.moveCostMultiplier, timeCost: 1 };
+  return {
+    kind: "validated",
+    intent,
+    energyCost: 5 * terrainDef.moveCostMultiplier,
+    timeCost: Math.ceil(terrainDef.moveCostMultiplier),
+  };
 }

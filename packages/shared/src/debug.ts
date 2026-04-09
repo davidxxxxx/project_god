@@ -47,6 +47,12 @@ export interface DebugAgentView {
   role?: string;
   /** Number of doctrine violations this entity has committed. MVP-07B. */
   doctrineViolations: number;
+  /** Recipes this agent has learned. MVP-02X. */
+  knownRecipes: Record<string, number>;
+  /** Experience-based preferences. MVP-02X. */
+  preferences: Record<string, number>;
+  /** Home structure ID. MVP-02X. */
+  homeStructureId?: string;
   lastAction?: ActionIntent;
   lastActionResult?: "validated" | "rejected";
   lastActionReason?: string;
@@ -97,7 +103,7 @@ export interface DebugTribeView {
 
 export interface DebugEnvironmentView {
   temperature: number;
-  timeOfDay: "day" | "night";
+  timeOfDay: "day" | "dusk" | "night";
   dayLength: number;
 }
 
@@ -156,6 +162,8 @@ export interface DebugProjection {
   divinePoints: number;
   /** Maximum divine points. MVP-05. */
   maxDivinePoints: number;
+  /** Tile terrain data for renderer. MVP-02Y. */
+  tiles: { x: number; y: number; terrain: string }[];
 }
 
 // ─── Simulation Metrics (per-tick time series) ───────────────

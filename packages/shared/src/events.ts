@@ -58,7 +58,16 @@ export type SimEventType =
   // MVP-07B: Doctrine & Taboo
   | "DOCTRINE_FORMED"
   | "DOCTRINE_VIOLATED"
-  | "DOCTRINE_REINFORCED";
+  | "DOCTRINE_REINFORCED"
+  // MVP-02X: Survival Intelligence
+  | "RESOURCE_HARVESTED"
+  | "RESOURCE_COOKED"
+  | "FUEL_ADDED"
+  | "HOME_CLAIMED"
+  | "HP_CHANGED"
+  | "RECIPE_LEARNED"
+  | "RESOURCE_PLANTED"
+  | "CHILD_FED";
 
 // ─── Per-Type Payloads ───────────────────────────────────────
 
@@ -300,7 +309,13 @@ export type SimEvent =
   // MVP-07B: Doctrine & Taboo
   | DoctrineFormedEvent
   | DoctrineViolatedEvent
-  | DoctrineReinforcedEvent;
+  | DoctrineReinforcedEvent
+  // MVP-02X: Survival Intelligence
+  | ResourceHarvestedEvent
+  | ResourceCookedEvent
+  | FuelAddedEvent
+  | HomeClaimedEvent
+  | HpChangedEvent;
 
 // ─── MVP-03-B: Knowledge Events ─────────────────────────────
 
@@ -484,4 +499,54 @@ export interface DoctrineReinforcedEvent {
   readonly tribeId: string;
   readonly doctrineId: string;
   readonly newStrength: number;
+}
+
+// ─── MVP-02X: Survival Intelligence Events ───────────────────
+
+/** Emitted when an agent harvests a resource (wood, stone, grass). */
+export interface ResourceHarvestedEvent {
+  readonly type: "RESOURCE_HARVESTED";
+  readonly tick: number;
+  readonly entityId: EntityId;
+  readonly resourceType: string;
+  readonly amount: number;
+  readonly position: Vec2;
+}
+
+/** Emitted when an agent cooks a recipe at a fire. */
+export interface ResourceCookedEvent {
+  readonly type: "RESOURCE_COOKED";
+  readonly tick: number;
+  readonly entityId: EntityId;
+  readonly recipeId: string;
+  readonly outputType: string;
+  readonly amount: number;
+}
+
+/** Emitted when an agent adds wood to a fire pit. */
+export interface FuelAddedEvent {
+  readonly type: "FUEL_ADDED";
+  readonly tick: number;
+  readonly entityId: EntityId;
+  readonly structureId: string;
+  readonly durabilityRestored: number;
+}
+
+/** Emitted when an agent claims a hut as home. */
+export interface HomeClaimedEvent {
+  readonly type: "HOME_CLAIMED";
+  readonly tick: number;
+  readonly entityId: EntityId;
+  readonly structureId: string;
+  readonly householdId: string;
+}
+
+/** Emitted when an entity's HP changes (damage or regen). */
+export interface HpChangedEvent {
+  readonly type: "HP_CHANGED";
+  readonly tick: number;
+  readonly entityId: EntityId;
+  readonly oldHp: number;
+  readonly newHp: number;
+  readonly cause: string;
 }

@@ -17,6 +17,12 @@
     "passable": false,
     "fertility": 0
   },
+  "rock": {
+    "displayName": "Rocky Ground",
+    "moveCostMultiplier": 1.2,
+    "passable": true,
+    "fertility": 0
+  },
   "swamp": {
     "displayName": "Swamp",
     "moveCostMultiplier": 3.0,

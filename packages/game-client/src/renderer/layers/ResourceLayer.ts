@@ -6,7 +6,7 @@
 
 import { Container, Graphics, Text, TextStyle } from "pixi.js";
 import {
-  TILE_SIZE, TILE_PITCH, COLOR_BERRY, COLOR_WATER, LABEL_FONT_SIZE,
+  TILE_SIZE, TILE_PITCH, COLOR_BERRY, COLOR_WATER, COLOR_WOOD, COLOR_STONE, COLOR_GRASS, COLOR_FIBER, LABEL_FONT_SIZE,
 } from "../theme";
 import type { DebugResourceView } from "@project-god/shared";
 
@@ -19,11 +19,19 @@ const LABEL_STYLE = new TextStyle({
 const RESOURCE_ICONS: Record<string, string> = {
   berry: "🫐",
   water: "💧",
+  wood: "🪵",
+  stone: "🪨",
+  grass: "🌿",
+  fiber: "🧵",
 };
 
 const RESOURCE_COLORS: Record<string, number> = {
   berry: COLOR_BERRY,
   water: COLOR_WATER,
+  wood: COLOR_WOOD,
+  stone: COLOR_STONE,
+  grass: COLOR_GRASS,
+  fiber: COLOR_FIBER,
 };
 
 export class ResourceLayer {

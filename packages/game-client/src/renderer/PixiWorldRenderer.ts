@@ -89,7 +89,10 @@ export class PixiWorldRenderer {
   update(proj: DebugProjection, selectedAgentId: string | null): void {
     if (!this.app) return;
 
-    // 1. Reset tile colors
+    // 1. Update tile terrain data + reset colors
+    if (proj.tiles) {
+      this.tileLayer.updateTerrain(proj.tiles);
+    }
     this.tileLayer.resetColors();
 
     // 2. Update entity layers

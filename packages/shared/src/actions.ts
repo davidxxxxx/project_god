@@ -7,9 +7,12 @@ export type ActionType =
   | "idle"
   | "move"
   | "gather"
+  | "harvest"    // MVP-02X: labor extraction (wood, stone, grass)
   | "eat"
   | "drink"
   | "drop"
+  | "cook"       // MVP-02X: transform raw→cooked at fire
+  | "add_fuel"   // MVP-02X: add wood to fire pit
   // Future phases:
   | "rest"
   | "pray"
@@ -17,7 +20,9 @@ export type ActionType =
   | "research"
   // MVP-07A: Priest rituals
   | "perform_ritual"
-  | "participate_ritual";
+  | "participate_ritual"
+  // MVP-02Y: Planting
+  | "plant";
 
 // ─── ActionIntent ────────────────────────────────────────────
 // agent-runtime produces these. It is a REQUEST, not a mutation.
@@ -28,6 +33,8 @@ export interface ActionIntent {
   readonly targetId?: ResourceNodeId;
   readonly position?: Vec2;
   readonly itemId?: string;
+  /** Recipe ID for cook actions. */
+  readonly recipeId?: string;
   /** Agent's self-reported confidence (0–1). Debug only. */
   readonly confidence?: number;
   /** Agent's self-reported reason. Debug only. */

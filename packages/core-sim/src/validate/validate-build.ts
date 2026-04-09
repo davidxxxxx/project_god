@@ -49,8 +49,21 @@ export function validateBuild(
     }
   }
 
+  // ── Faith condition check (MVP-02X) ────────────────────────
+  if (def.faithCondition && def.faithCondition > 0) {
+    const builderFaith = entity.attributes?.faith ?? 0;
+    if (builderFaith < def.faithCondition) {
+      return {
+        kind: "rejected",
+        intent,
+        reason: `insufficient faith: need ${def.faithCondition}, have ${builderFaith}`,
+      };
+    }
+  }
+
   // ── Skill prerequisite check (MVP-02-D) ────────────────────
-  const requiredSkillId = STRUCTURE_SKILL_REQUIREMENTS[structureType];
+  // Check both the static STRUCTURE_SKILL_REQUIREMENTS map and the StructureDef.requiresSkill field
+  const requiredSkillId = def.requiresSkill ?? STRUCTURE_SKILL_REQUIREMENTS[structureType];
   if (requiredSkillId && skillDefs) {
     const hasSkill = (entity.skills?.[requiredSkillId] ?? 0) > 0;
 

@@ -1,12 +1,12 @@
 /**
- * TileLayer.ts — Renders the background tile grid.
+ * TileLayer.ts — Renders the background tile grid with terrain colors.
  *
- * Each tile is a filled rectangle drawn once on init.
- * Night-mode is handled by OverlayLayer, not here.
+ * MVP-02Y: Colors tiles by terrain type (grass, forest, rock, river, etc.)
+ * instead of uniform gray.
  */
 
 import { Container, Graphics } from "pixi.js";
-import { TILE_SIZE, TILE_PITCH, COLOR_TILE } from "../theme";
+import { TILE_SIZE, TILE_PITCH, COLOR_TILE, COLOR_TERRAIN } from "../theme";
 
 export class TileLayer {
   readonly container = new Container();
@@ -16,12 +16,16 @@ export class TileLayer {
   private cols = 0;
   private rows = 0;
 
+  /** Terrain type per tile for coloring. */
+  private terrainMap: string[] = [];
+
   /**
    * Build the grid. Called once on init and on map resize.
    */
   build(cols: number, rows: number): void {
     this.container.removeChildren();
     this.tiles = [];
+    this.terrainMap = [];
     this.cols = cols;
     this.rows = rows;
 
@@ -33,17 +37,33 @@ export class TileLayer {
         g.y = y * TILE_PITCH;
         this.container.addChild(g);
         this.tiles.push(g);
+        this.terrainMap.push("grass"); // default
       }
     }
   }
 
   /**
-   * Reset all tiles to default color. Called at the start of each render frame.
+   * Update terrain data from projection. Called once per render frame.
+   * MVP-02Y: Colors tiles based on terrain type.
+   */
+  updateTerrain(tileData: { x: number; y: number; terrain: string }[]): void {
+    for (const t of tileData) {
+      if (t.x < 0 || t.x >= this.cols || t.y < 0 || t.y >= this.rows) continue;
+      const idx = t.y * this.cols + t.x;
+      this.terrainMap[idx] = t.terrain;
+    }
+  }
+
+  /**
+   * Reset all tiles to their terrain color. Called at the start of each render frame.
    */
   resetColors(): void {
-    for (const g of this.tiles) {
+    for (let i = 0; i < this.tiles.length; i++) {
+      const g = this.tiles[i];
+      const terrain = this.terrainMap[i] ?? "grass";
+      const color = COLOR_TERRAIN[terrain] ?? COLOR_TILE;
       g.clear();
-      g.rect(0, 0, TILE_SIZE, TILE_SIZE).fill({ color: COLOR_TILE });
+      g.rect(0, 0, TILE_SIZE, TILE_SIZE).fill({ color });
     }
   }
 

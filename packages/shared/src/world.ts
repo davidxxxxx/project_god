@@ -161,6 +161,8 @@ export interface SocialImpression {
 export interface EntityNeeds {
   hunger: number;
   thirst: number;
+  /** Hit points. Death at 0. Damage from starvation/dehydration/exposure. MVP-02X. */
+  hp: number;
   [key: string]: number; // future: fatigue, safetyPressure…
 }
 
@@ -222,6 +224,27 @@ export interface EntityState {
   /** Whether entity is currently in prayer state. */
   isPraying?: boolean;
 
+  // ── MVP-02X: Survival Intelligence ─────────────────────────
+
+  /** Family unit ID. Married pairs + children share a household. */
+  householdId?: string;
+  /** Remembered home base position (fire pit / hut location). */
+  campPosition?: Vec2;
+  /** Structure ID of claimed home (hut). */
+  homeStructureId?: StructureId;
+
+  /** Recipes this entity has learned. key = recipe id, value = times crafted. */
+  knownRecipes?: Record<string, number>;
+  /** Observation progress toward learning recipes. key = recipe id, value = ticks observed. */
+  recipeObservationProgress?: Record<string, number>;
+  /** Experience-based decision preferences. key = category, value = weight (-1..1). */
+  preferences?: Record<string, number>;
+
+  // ── MVP-02Y: Terrain Movement ──────────────────────────────
+
+  /** Tick when entity can next perform a move action. Terrain cost sets this. */
+  moveCooldownUntil?: number;
+
   // ── MVP-07B: Doctrine alignment ────────────────────────────
 
   /** How well this entity follows each doctrine (-100 to 100). */
@@ -272,7 +295,7 @@ export interface DoctrineEntry {
 
 // ─── Environment State (MVP-03-A: temperature + day/night) ───
 
-export type TimeOfDay = "day" | "night";
+export type TimeOfDay = "day" | "dusk" | "night";
 
 export interface EnvironmentState {
   /** Current world temperature 0-100 (50 = comfortable, <40 = cold). */

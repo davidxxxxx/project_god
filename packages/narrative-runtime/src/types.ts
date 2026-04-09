@@ -63,8 +63,8 @@ export interface NarrativeContext {
   tribeName?: string;
   /** Agent's faith level. */
   faith?: number;
-  /** Is it day or night? */
-  timeOfDay?: "day" | "night";
+  /** Is it day, dusk, or night? */
+  timeOfDay?: "day" | "dusk" | "night";
   /** Current temperature. */
   temperature?: number;
   /** Number of alive tribe members. */

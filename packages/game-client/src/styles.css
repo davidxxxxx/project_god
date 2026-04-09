@@ -359,6 +359,8 @@ h2 {
 .need-bar-fill.hunger { background: var(--accent-yellow); }
 .need-bar-fill.thirst { background: var(--accent-blue); }
 .need-bar-fill.exposure { background: #4ecdc4; } /* cyan-teal for temperature/exposure */
+.need-bar-fill.hp { background: #e74c3c; } /* red for hit points */
+.need-bar-fill.faith { background: linear-gradient(90deg, #f59e0b, #fbbf24); } /* golden for faith */
 .need-bar-fill.critical { background: var(--accent-red) !important; }
 
 /* Status badges (MVP-03-A) */

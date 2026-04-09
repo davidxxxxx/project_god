@@ -12,6 +12,10 @@ export interface ResourceDef {
   restoresNeed: Record<string, number>;
   maxQuantity: number;
   regenPerTick: number;
+  /** Resource category: food, drink, material. MVP-02X. */
+  category?: string;
+  /** If set, this resource requires 'harvest' action instead of 'gather'. */
+  harvestAction?: string;
 }
 
 export interface ActionDef {
@@ -34,18 +38,43 @@ export interface StructureDef {
   fuelPerTick: number;
   effectRadius: number;
   effects: string[];
+  /** Natural durability decay per tick (no fuel). MVP-02X. */
+  decayPerTick?: number;
+  /** Skill required to build this structure. MVP-02X. */
+  requiresSkill?: string;
+  description?: string;
+  /** Whether this is a spiritual center. MVP-07A. */
+  isSpiritualCenter?: boolean;
+  /** Minimum faith required to build this structure. MVP-02X. */
+  faithCondition?: number;
 }
 
 export interface SkillDef {
   displayName: string;
-  /** How this skill is acquired: observation, practice, or innate. */
-  learnMethod: "observation" | "practice" | "innate";
+  /** How this skill is acquired: observation, practice, innate, or discovery. */
+  learnMethod: "observation" | "practice" | "innate" | "discovery";
   /** Ticks of observation/practice needed to learn. */
   learnTicks: number;
   /** Proficiency level when first learned (0–1). */
   initialProficiency: number;
   /** Maximum proficiency (0–1). */
   maxProficiency: number;
+}
+
+/** Recipe definition for crafting/cooking. MVP-02X. */
+export interface RecipeDef {
+  displayName: string;
+  /** Input items consumed (type → quantity). */
+  inputs: Record<string, number>;
+  /** Output items produced (type → quantity). */
+  outputs: Record<string, number>;
+  /** Must be near this structure type to craft. */
+  requiresNearby: string;
+  /** Skill required (null = no skill needed). */
+  requiredSkill: string | null;
+  /** Skill proficiency gain per craft. */
+  skillGainOnCraft: number;
+  description: string;
 }
 
 export interface TechnologyDef {

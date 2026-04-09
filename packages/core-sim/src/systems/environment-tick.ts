@@ -30,12 +30,20 @@ export function calculateTemperature(tick: number, dayLength: number): number {
 }
 
 /**
- * Determine time of day from the sine value.
- * sin > 0 → day, sin <= 0 → night
+ * Determine time of day from the cycle phase.
+ * Phase 0–0.5: sin > 0 → day
+ * Phase 0.35–0.5: late day → dusk (last 30% of day before night)
+ * Phase 0.5–1.0: sin <= 0 → night
  */
 export function calculateTimeOfDay(tick: number, dayLength: number): TimeOfDay {
-  const angle = (2 * Math.PI * tick) / dayLength;
-  return Math.sin(angle) > 0 ? "day" : "night";
+  const phase = (tick % dayLength) / dayLength;
+  const angle = 2 * Math.PI * tick / dayLength;
+  const sinVal = Math.sin(angle);
+
+  if (sinVal <= 0) return "night";
+  // Dusk: last 30% of the daylight period (phase 0.35 to 0.5)
+  if (phase >= 0.35 && phase < 0.5) return "dusk";
+  return "day";
 }
 
 /**

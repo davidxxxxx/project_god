@@ -1,30 +1,48 @@
 {
   "fire_pit": {
     "displayName": "Fire Pit",
-    "requiredItems": { "berry": 2 },
+    "requiredItems": { "stone": 2, "wood": 1 },
     "buildRange": 0,
     "initialDurability": 50,
     "fuelPerTick": 1,
     "effectRadius": 2,
-    "effects": ["warming"]
+    "effects": ["warming"],
+    "decayPerTick": 0,
+    "description": "Warmth and cooking center. Requires wood fuel to stay lit."
   },
   "lean_to": {
     "displayName": "Lean-To Shelter",
-    "requiredItems": { "berry": 2 },
+    "requiredItems": { "wood": 2, "grass": 2 },
     "buildRange": 0,
-    "initialDurability": 60,
-    "fuelPerTick": 0.5,
+    "initialDurability": 120,
+    "fuelPerTick": 0,
     "effectRadius": 1,
-    "effects": ["sheltered"]
+    "effects": ["sheltered"],
+    "decayPerTick": 1,
+    "description": "Temporary shelter. Protects from exposure but decays naturally."
+  },
+  "hut": {
+    "displayName": "Family Hut",
+    "requiredItems": { "wood": 6, "grass": 3, "stone": 2 },
+    "buildRange": 0,
+    "initialDurability": 500,
+    "fuelPerTick": 0,
+    "effectRadius": 2,
+    "effects": ["sheltered", "home"],
+    "decayPerTick": 0.05,
+    "description": "Permanent family dwelling. Provides shelter and accelerated HP recovery.",
+    "requiresSkill": "shelter_building"
   },
   "shrine": {
     "displayName": "Tribal Shrine",
-    "requiredItems": { "berry": 3 },
+    "requiredItems": { "stone": 4, "wood": 2 },
     "buildRange": 0,
     "initialDurability": 1000,
     "fuelPerTick": 0,
     "effectRadius": 3,
     "effects": ["spiritual_focus"],
-    "isSpiritualCenter": true
+    "decayPerTick": 0,
+    "isSpiritualCenter": true,
+    "description": "Sacred structure for rituals and spiritual gatherings."
   }
 }

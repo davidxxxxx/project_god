@@ -7,6 +7,30 @@
     "initialProficiency": 0.5,
     "maxProficiency": 1.0
   },
+  "cooking": {
+    "displayName": "Cooking",
+    "description": "Transform raw food into cooked meals at a fire",
+    "learnMethod": "observation",
+    "learnTicks": 3,
+    "initialProficiency": 0.5,
+    "maxProficiency": 1.0
+  },
+  "shelter_building": {
+    "displayName": "Shelter Building",
+    "description": "Construct permanent shelters and huts",
+    "learnMethod": "observation",
+    "learnTicks": 5,
+    "initialProficiency": 0.5,
+    "maxProficiency": 1.0
+  },
+  "planting": {
+    "displayName": "Planting",
+    "description": "Transplant and cultivate berry bushes",
+    "learnMethod": "discovery",
+    "learnTicks": 10,
+    "initialProficiency": 0.3,
+    "maxProficiency": 1.0
+  },
   "spiritual_awareness": {
     "displayName": "Spiritual Awareness",
     "description": "Understanding of the divine and ability to lead rituals",

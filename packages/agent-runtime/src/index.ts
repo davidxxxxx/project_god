@@ -11,4 +11,5 @@ export {
   updateSocialMemory,
   distillSemanticMemory, decaySemanticMemory,
   teachToCulturalMemory, inheritFromCulturalMemory, decayCulturalMemory,
+  updateRecipeObservation, recordRecipeCrafted, updatePreferences, claimHome,
 } from "./memory";

@@ -7,7 +7,7 @@
 import { Container, Graphics, Text, TextStyle } from "pixi.js";
 import {
   TILE_SIZE, TILE_PITCH,
-  COLOR_FIRE_PIT, COLOR_LEAN_TO, COLOR_STRUCTURE_DEAD, COLOR_SHRINE,
+  COLOR_FIRE_PIT, COLOR_LEAN_TO, COLOR_STRUCTURE_DEAD, COLOR_SHRINE, COLOR_HUT,
   LABEL_FONT_SIZE,
 } from "../theme";
 import type { DebugStructureView } from "@project-god/shared";
@@ -21,6 +21,7 @@ const LABEL_STYLE = new TextStyle({
 const STRUCTURE_ICONS: Record<string, string> = {
   fire_pit: "🔥",
   lean_to: "🛖",
+  hut: "🏠",
   shrine: "⛩️",
 };
 
@@ -43,6 +44,8 @@ export class StructureLayer {
         color = COLOR_LEAN_TO;
       } else if (s.type === "shrine") {
         color = COLOR_SHRINE;
+      } else if (s.type === "hut") {
+        color = COLOR_HUT;
       } else {
         color = COLOR_FIRE_PIT;
       }

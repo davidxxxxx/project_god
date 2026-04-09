@@ -31,7 +31,7 @@ import { tickSpiritual } from "./systems/spiritual-tick";
 import { tickDoctrine } from "./systems/doctrine-tick";
 import { validateAction, type ValidationContext } from "./validate";
 import { executeAction, type ExecutionContext } from "./execute";
-import type { NeedDef, ResourceDef, ActionDef, TerrainDef, StructureDef, SkillDef, TechnologyDef, LifecycleDef, FaithDef } from "./content-types";
+import type { NeedDef, ResourceDef, ActionDef, TerrainDef, StructureDef, SkillDef, TechnologyDef, LifecycleDef, FaithDef, RecipeDef } from "./content-types";
 
 export interface TickContext {
   needs: Record<string, NeedDef>;
@@ -48,6 +48,8 @@ export interface TickContext {
   lifecycle?: LifecycleDef;
   /** Faith/prayer/miracle definitions. Optional for backward compat. (MVP-05) */
   faith?: FaithDef;
+  /** Recipe definitions for cooking/crafting. Optional for backward compat. (MVP-02X) */
+  recipes?: Record<string, RecipeDef>;
 }
 
 export function tickWorld(
@@ -116,8 +118,8 @@ export function tickWorld(
   events.push(...tickTribes(world));
 
   // ── 5+6. Validate and execute ────────────────────────────
-  const valCtx: ValidationContext = { actions: ctx.actions, terrain: ctx.terrain, structures: ctx.structures, skills: ctx.skills, faith: ctx.faith };
-  const exeCtx: ExecutionContext = { resources: ctx.resources, needs: ctx.needs, structures: ctx.structures, skills: ctx.skills, faith: ctx.faith };
+  const valCtx: ValidationContext = { actions: ctx.actions, terrain: ctx.terrain, structures: ctx.structures, skills: ctx.skills, faith: ctx.faith, resources: ctx.resources, recipes: ctx.recipes };
+  const exeCtx: ExecutionContext = { resources: ctx.resources, needs: ctx.needs, structures: ctx.structures, skills: ctx.skills, faith: ctx.faith, recipes: ctx.recipes, terrain: ctx.terrain };
 
   for (const intent of intents) {
     const outcome = validateAction(intent, world, valCtx);

@@ -212,7 +212,7 @@ function tickBirth(world: WorldState, cfg: LifecycleDef): SimEvent[] {
         body: Math.round(Math.max(1, Math.min(10, avgBody + rng.nextInt(-mutation, mutation)))),
         faith: Math.round(avgFaith * 0.5), // MVP-05: children inherit 50% of parents' avg faith
       },
-      needs: { hunger: 80, thirst: 80, exposure: 100 },
+      needs: { hunger: 80, thirst: 80, exposure: 100, hp: 100 },
       inventory: {},
       alive: true,
       age: 0,

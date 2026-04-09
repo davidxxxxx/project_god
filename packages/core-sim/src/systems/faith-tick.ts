@@ -81,6 +81,31 @@ export function tickFaith(
         }
       }
     }
+
+    // ── MVP-02Z: Passive faith gains (pre-shrine era) ────────
+    // Surviving cold nights near fire/shelter: +1 faith per 10 ticks
+    const hasSheltered = entity.statuses?.includes("sheltered") ?? false;
+    const hasWarming = entity.statuses?.includes("warming") ?? false;
+    const hasHome = entity.statuses?.includes("home") ?? false;
+    const isNightSurvival = (hasSheltered || hasWarming || hasHome);
+
+    if (isNightSurvival && tick > 0 && tick % 10 === 0) {
+      const faith = entity.attributes.faith ?? 0;
+      if (faith < 20) { // Cap passive gains at 20 (shrine territory starts here)
+        const newFaith = Math.min(20, faith + 1);
+        entity.attributes.faith = newFaith;
+        if (newFaith !== faith) {
+          events.push({
+            type: "FAITH_CHANGED",
+            tick,
+            entityId: entity.id,
+            oldFaith: faith,
+            newFaith,
+            reason: "survived_sheltered",
+          } as SimEvent);
+        }
+      }
+    }
   }
 
   // ── Divine points regeneration ──────────────────────────

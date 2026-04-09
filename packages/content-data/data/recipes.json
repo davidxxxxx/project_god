@@ -1,0 +1,20 @@
+{
+  "roast_berry": {
+    "displayName": "Roast Berry",
+    "inputs": { "berry": 1 },
+    "outputs": { "roast_berry": 1 },
+    "requiresNearby": "fire_pit",
+    "requiredSkill": "cooking",
+    "skillGainOnCraft": 0.05,
+    "description": "Roasting berries over fire doubles their nutrition."
+  },
+  "boiled_water": {
+    "displayName": "Boiled Water",
+    "inputs": { "water": 1 },
+    "outputs": { "boiled_water": 1 },
+    "requiresNearby": "fire_pit",
+    "requiredSkill": null,
+    "skillGainOnCraft": 0,
+    "description": "Purified water — prevents future illness."
+  }
+}

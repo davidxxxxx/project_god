@@ -70,6 +70,9 @@ export function buildProjection(
       doctrineViolations: entity.doctrineAlignment
         ? Object.values(entity.doctrineAlignment).filter(v => v < 0).length
         : 0,
+      knownRecipes: { ...(entity.knownRecipes ?? {}) },
+      preferences: { ...(entity.preferences ?? {}) },
+      homeStructureId: entity.homeStructureId ?? undefined,
       lastAction,
       lastActionResult,
       lastActionReason,
@@ -219,5 +222,11 @@ export function buildProjection(
     },
     divinePoints: world.divinePoints ?? 0,
     maxDivinePoints: world.maxDivinePoints ?? 20,
+    // MVP-02Y: Tile terrain data for renderer
+    tiles: Object.values(world.tiles).map((t: any) => ({
+      x: t.position.x,
+      y: t.position.y,
+      terrain: t.terrain,
+    })),
   };
 }

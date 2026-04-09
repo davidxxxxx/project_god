@@ -30,8 +30,10 @@ export function tickStructures(
     const def = structureDefs[structure.type];
     if (!def) continue;
 
-    // ── 1. Consume fuel ─────────────────────────────────────
-    structure.durability -= def.fuelPerTick;
+    // ── 1. Consume fuel + natural decay ────────────────────────
+    const fuelDecay = def.fuelPerTick ?? 0;
+    const naturalDecay = def.decayPerTick ?? 0;
+    structure.durability -= (fuelDecay + naturalDecay);
 
     // ── 2. Check expiry ─────────────────────────────────────
     if (structure.durability <= 0) {
@@ -77,6 +79,13 @@ export function tickStructures(
           structureId: structure.id,
         } as any);
       }
+
+      // MVP-02X: 'home' effect — huts provide accelerated HP regen
+      if (def.effects.includes("home")) {
+        if (!entity.statuses.includes("home")) {
+          entity.statuses.push("home");
+        }
+      }
     }
   }
 
@@ -101,6 +110,16 @@ export function tickStructures(
     });
     if (!nearActiveShelter) {
       entity.statuses = entity.statuses.filter((st) => st !== "sheltered");
+    }
+
+    // ── Clear home when not near hut (MVP-02X)
+    const nearActiveHome = structures.some((s) => {
+      if (!s.active) return false;
+      const def = structureDefs[s.type];
+      return def?.effects.includes("home") && manhattan(entity.position, s.position) <= def.effectRadius;
+    });
+    if (!nearActiveHome) {
+      entity.statuses = entity.statuses.filter((st) => st !== "home");
     }
   }
 

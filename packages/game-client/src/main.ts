@@ -47,7 +47,7 @@ async function init() {
     id: "golden-scenario-001",
     worldConfig: GOLDEN_WORLD_CONFIG,
     tickContext: GOLDEN_TICK_CONTEXT,
-    decideFn: defaultMemoryDecision(GOLDEN_NEEDS_CONFIG),
+    decideFn: defaultMemoryDecision(GOLDEN_NEEDS_CONFIG, GOLDEN_TICK_CONTEXT.terrain),
     postTickHook: defaultPostTickMemoryHook(),
   });
 
@@ -93,14 +93,17 @@ async function init() {
 // ── Event Filters ──────────────────────────────────────────
 
 const EVENT_TYPES = [
-  "ENTITY_MOVED", "RESOURCE_GATHERED", "FOOD_EATEN", "WATER_DRUNK",
+  "ENTITY_MOVED", "RESOURCE_GATHERED", "RESOURCE_HARVESTED", "RESOURCE_COOKED",
+  "FOOD_EATEN", "WATER_DRUNK", "FUEL_ADDED", "HP_CHANGED",
   "ACTION_REJECTED", "ENTITY_DIED", "NEED_DECAYED",
   "STRUCTURE_BUILT", "STRUCTURE_EXPIRED", "WARMING_APPLIED",
   "SKILL_LEARNED", "SKILL_OBSERVED", "TECHNOLOGY_UNLOCKED",
   "TRIBE_GATHER_POINT_UPDATED", "SOCIAL_MEMORY_UPDATED",
   "ENVIRONMENT_CHANGED", "EXPOSURE_WARNING", "SHELTERED_APPLIED",
   "PRAYER_STARTED", "PRAYER_COMPLETED", "PRAYER_UNANSWERED",
-  "MIRACLE_PERFORMED", "FAITH_CHANGED",
+  "MIRACLE_PERFORMED", "FAITH_CHANGED", "HOME_CLAIMED", "RECIPE_LEARNED",
+  "RESOURCE_PLANTED",
+  "CHILD_FED",
 ];
 
 function buildEventFilters() {
@@ -297,6 +300,7 @@ function renderAgentList(proj: DebugProjection) {
     const statusBadges = (agent.statuses ?? []).map((s: string) => {
       if (s === "warming") return `<span class="status-badge warming" title="Near fire pit">🔥</span>`;
       if (s === "sheltered") return `<span class="status-badge sheltered" title="In shelter">🛖</span>`;
+      if (s === "home") return `<span class="status-badge" title="In family hut" style="color:#d9a64e">🏠</span>`;
       return `<span class="status-badge" title="${s}">${s}</span>`;
     }).join("");
 
@@ -314,21 +318,27 @@ function renderAgentList(proj: DebugProjection) {
     const faithBadge = agent.faith > 0 ? `<span class="life-badge" style="color:#fbbf24" title="faith: ${agent.faith}">✨${agent.faith}</span>` : "";
     const priestBadge = agent.role === "priest" ? `<span class="life-badge" style="color:#a78bfa" title="Priest">⛩️</span>` : "";
 
+    // MVP-02X: Thirst/Exposure are hidden backend states — show as compact status icons
+    const thirstVal = Math.round(agent.needs.thirst ?? 0);
+    const exposureVal = Math.round(agent.needs.exposure ?? 100);
+    const thirstIcon = thirstVal <= 25 ? '🔴' : thirstVal <= 50 ? '🟡' : '🟢';
+    const exposureIcon = exposureVal <= 30 ? '🔴' : exposureVal <= 60 ? '🟡' : '🟢';
+
     card.innerHTML = `
-      <div class="agent-name">${dot}${agent.id} ${lifeBadge}${spouseBadge}${prayerBadge}${faithBadge}${priestBadge}${skillBadges ? ` ${skillBadges}` : ""}${socialBadge ? ` ${socialBadge}` : ""}${knowledgeBadge ? ` ${knowledgeBadge}` : ""}${statusBadges ? ` ${statusBadges}` : ""}</div>
+      <div class="agent-name">${dot}${agent.id} ${lifeBadge}${spouseBadge}${prayerBadge}${priestBadge}${skillBadges ? ` ${skillBadges}` : ""}${socialBadge ? ` ${socialBadge}` : ""}${knowledgeBadge ? ` ${knowledgeBadge}` : ""}${statusBadges ? ` ${statusBadges}` : ""}</div>
+      <div class="need-bar-container">
+        <div class="need-bar-label"><span>HP</span><span>${Math.round(agent.needs.hp ?? 100)}</span></div>
+        <div class="need-bar"><div class="need-bar-fill hp${(agent.needs.hp ?? 100) <= 30 ? " critical" : ""}" style="width:${agent.needs.hp ?? 100}%"></div></div>
+      </div>
       <div class="need-bar-container">
         <div class="need-bar-label"><span>Hunger</span><span>${Math.round(agent.needs.hunger ?? 0)}</span></div>
         <div class="need-bar"><div class="need-bar-fill hunger${(agent.needs.hunger ?? 0) <= 25 ? " critical" : ""}" style="width:${agent.needs.hunger ?? 0}%"></div></div>
       </div>
       <div class="need-bar-container">
-        <div class="need-bar-label"><span>Thirst</span><span>${Math.round(agent.needs.thirst ?? 0)}</span></div>
-        <div class="need-bar"><div class="need-bar-fill thirst${(agent.needs.thirst ?? 0) <= 25 ? " critical" : ""}" style="width:${agent.needs.thirst ?? 0}%"></div></div>
+        <div class="need-bar-label"><span>Faith</span><span>${agent.faith}</span></div>
+        <div class="need-bar"><div class="need-bar-fill faith" style="width:${agent.faith}%"></div></div>
       </div>
-      <div class="need-bar-container">
-        <div class="need-bar-label"><span>Exposure</span><span>${Math.round(agent.needs.exposure ?? 100)}</span></div>
-        <div class="need-bar"><div class="need-bar-fill exposure${(agent.needs.exposure ?? 100) <= 30 ? " critical" : ""}" style="width:${agent.needs.exposure ?? 100}%"></div></div>
-      </div>
-      <div style="font-size:10px;color:var(--text-2);margin-top:3px">📦 ${inv}</div>
+      <div style="font-size:9px;color:var(--text-2);margin-top:3px" title="Thirst: ${thirstVal} | Exposure: ${exposureVal}">💧${thirstIcon}${thirstVal} 🌡️${exposureIcon}${exposureVal} | 📦 ${inv}</div>
     `;
     container.appendChild(card);
   }
@@ -395,6 +405,15 @@ function formatEvent(ev: SimEvent): string {
     case "DOCTRINE_FORMED": return `📜 Doctrine formed: "${e.doctrineId}" (${e.doctrineType}, strength:${e.strength})`;
     case "DOCTRINE_VIOLATED": return `⚠️ Doctrine violated: "${e.doctrineId}"`;
     case "DOCTRINE_REINFORCED": return `📿 Doctrine reinforced: "${e.doctrineId}" (strength:${e.newStrength})`;
+    // MVP-02X: Survival Intelligence events
+    case "RESOURCE_HARVESTED": return `⛏️ ${e.entityId} harvested ${e.amount} ${e.resourceType}`;
+    case "RESOURCE_COOKED": return `🍳 ${e.entityId} cooked ${e.outputType} (recipe: ${e.recipeId})`;
+    case "FUEL_ADDED": return `🪵 ${e.entityId} added fuel to ${e.structureId} (+${e.durabilityRestored})`;
+    case "HOME_CLAIMED": return `🏠 ${e.entityId} claimed home ${e.structureId}`;
+    case "HP_CHANGED": return `${e.newHp < e.oldHp ? '💔' : '💚'} ${e.entityId} HP ${e.oldHp}→${e.newHp} (${e.cause})`;
+    case "RECIPE_LEARNED": return `📗 ${e.entityId} learned recipe: ${e.recipeId} (${e.source}${e.observedFrom ? ` from ${e.observedFrom}` : ''})`;
+    case "RESOURCE_PLANTED": return `🌱 ${e.entityId} planted ${e.resourceType} at (${e.position?.x},${e.position?.y})`;
+    case "CHILD_FED": return `🍼 ${e.entityId} fed child ${e.childId}`;
     default: return "";
   }
 }
@@ -429,9 +448,10 @@ function renderBottomBar(proj: DebugProjection) {
   // Environment (MVP-03-A)
   const env = proj.environment;
   if (env) {
-    const icon = env.timeOfDay === "day" ? "🌞" : "🌙";
+    const icon = env.timeOfDay === "day" ? "🌞" : env.timeOfDay === "dusk" ? "🌅" : "🌙";
     const tempColor = env.temperature < 40 ? "🥶" : env.temperature < 50 ? "😐" : "☀️";
-    document.getElementById("metric-environment")!.textContent = `${icon} ${env.timeOfDay === "day" ? "Day" : "Night"} | ${tempColor} ${env.temperature.toFixed(0)}°`;
+    const todLabel = env.timeOfDay === "day" ? "Day" : env.timeOfDay === "dusk" ? "Dusk" : "Night";
+    document.getElementById("metric-environment")!.textContent = `${icon} ${todLabel} | ${tempColor} ${env.temperature.toFixed(0)}°`;
     // Night-mode class on map container
     // Night mode is now handled by PixiJS OverlayLayer
   }
@@ -475,13 +495,26 @@ function renderBottomBar(proj: DebugProjection) {
           `</div>`
         : "";
 
+      // Preference-based intelligence display (MVP-02X)
+      const prefs = Object.entries(agent.preferences)
+        .filter(([_, v]) => Math.abs(v) > 0.01)
+        .map(([k, v]) => `${k}:${v > 0 ? '+' : ''}${v.toFixed(2)}`)
+        .join(" ") || "none";
+      const recipes = Object.keys(agent.knownRecipes)
+        .map(r => `${r}(${agent.knownRecipes[r]})`)
+        .join(" ") || "none";
+      const homeLabel = agent.homeStructureId ? `🏠 ${agent.homeStructureId}` : "🏕️ no home";
+
       detailEl.innerHTML = `
         <strong>${agent.id}</strong> ${sexIcon} age ${agent.age} (${agent.lifeStage})
         &nbsp;|&nbsp; Tribe: ${agent.tribeId}
         &nbsp;|&nbsp; Pos: (${agent.position.x},${agent.position.y})
-        &nbsp;|&nbsp; H:${Math.round(agent.needs.hunger ?? 0)} T:${Math.round(agent.needs.thirst ?? 0)} E:${Math.round(agent.needs.exposure ?? 100)}
+        &nbsp;|&nbsp; HP:${Math.round(agent.needs.hp ?? 100)} H:${Math.round(agent.needs.hunger ?? 0)} T:${Math.round(agent.needs.thirst ?? 0)} E:${Math.round(agent.needs.exposure ?? 100)}
         &nbsp;|&nbsp; 📦 ${inv}
         &nbsp;|&nbsp; 🧠 skills: ${skills}
+        &nbsp;|&nbsp; 🍳 recipes: ${recipes}
+        &nbsp;|&nbsp; 📊 prefs: ${prefs}
+        &nbsp;|&nbsp; ${homeLabel}
         &nbsp;|&nbsp; 👥 knows ${agent.socialMemoryCount}
         &nbsp;|&nbsp; 📚 semantic: ${agent.semanticMemoryCount}
         ${agent.spouseId ? `&nbsp;|&nbsp; 💍 ${agent.spouseId}` : ""}

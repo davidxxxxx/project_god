@@ -154,6 +154,24 @@ export function updateMemoryFromEvents(
         }
         break;
       }
+      case "RESOURCE_COOKED": {
+        if ((event as any).entityId !== entity.id) break;
+        // Record recipe as known + crafted
+        recordRecipeCrafted(entity, (event as any).recipeId);
+        break;
+      }
+      case "RESOURCE_HARVESTED": {
+        if ((event as any).entityId !== entity.id) break;
+        // Remember harvest locations
+        recordEpisode(entity, {
+          tick,
+          type: "found_resource",
+          position: { ...getNodePosition(event as any) },
+          resourceType: (event as any).resourceType,
+          detail: `harvested ${(event as any).amount}`,
+        });
+        break;
+      }
       // Future: ENTITY_DIED nearby → danger_zone memory
     }
   }
@@ -549,3 +567,197 @@ export function decayCulturalMemory(tribe: TribeState, tick: number): void {
     return entry.confidence > 0;
   });
 }
+
+// ── Recipe Observation Learning (MVP-02X) ─────────────────────
+
+/** Ticks of observation needed to learn a recipe. */
+const RECIPE_OBSERVATION_THRESHOLD = 3;
+
+/**
+ * Update recipe observation progress when entity sees someone nearby cooking.
+ * If observation ≥ RECIPE_OBSERVATION_THRESHOLD, the entity learns the recipe.
+ *
+ * Returns events for newly learned recipes.
+ */
+export function updateRecipeObservation(
+  entity: EntityState,
+  events: SimEvent[],
+  nearbyEntityIds: string[],
+  tick: number
+): SimEvent[] {
+  const resultEvents: SimEvent[] = [];
+  if (!entity.alive) return resultEvents;
+
+  // Initialize if needed
+  if (!entity.knownRecipes) entity.knownRecipes = {};
+  if (!entity.recipeObservationProgress) entity.recipeObservationProgress = {};
+
+  // Look for RESOURCE_COOKED events from nearby entities
+  for (const event of events) {
+    if (event.type !== "RESOURCE_COOKED") continue;
+    const cookerId = (event as any).entityId;
+    const recipeId = (event as any).recipeId;
+    if (!recipeId || !cookerId) continue;
+
+    // Skip if this is our own cooking event
+    if (cookerId === entity.id) continue;
+
+    // Only observe if the cooker is nearby
+    if (!nearbyEntityIds.includes(cookerId)) continue;
+
+    // Already know this recipe? Skip
+    if ((entity.knownRecipes[recipeId] ?? 0) > 0) continue;
+
+    // Increment observation count
+    entity.recipeObservationProgress[recipeId] = (entity.recipeObservationProgress[recipeId] ?? 0) + 1;
+
+    // Learned?
+    if (entity.recipeObservationProgress[recipeId] >= RECIPE_OBSERVATION_THRESHOLD) {
+      entity.knownRecipes[recipeId] = 0; // Known, 0 times crafted
+      delete entity.recipeObservationProgress[recipeId];
+
+      resultEvents.push({
+        type: "RECIPE_LEARNED",
+        tick,
+        entityId: entity.id,
+        recipeId,
+        source: "observation",
+        observedFrom: cookerId,
+      } as unknown as SimEvent);
+    }
+  }
+
+  return resultEvents;
+}
+
+/**
+ * Grant recipe knowledge when entity successfully cooks.
+ * Also increments craft count.
+ */
+export function recordRecipeCrafted(entity: EntityState, recipeId: string): void {
+  if (!entity.knownRecipes) entity.knownRecipes = {};
+  entity.knownRecipes[recipeId] = (entity.knownRecipes[recipeId] ?? 0) + 1;
+}
+
+// ── Experience-Based Preferences (MVP-02X) ────────────────────
+
+/**
+ * Preference categories:
+ * - "cook": preference to cook food vs eat raw
+ * - "shelter": preference to build/seek shelter
+ * - "hut": preference to build permanent hut vs lean-to
+ * - "stockpile": preference to gather extra materials
+ * - "social": preference for group proximity
+ */
+
+/** Maximum preference weight (capped at ±1.0). */
+const MAX_PREFERENCE = 1.0;
+/** How much each positive outcome shifts preference. */
+const PREFERENCE_INCREMENT = 0.05;
+/** How much each negative outcome shifts preference. */
+const PREFERENCE_DECREMENT = 0.03;
+
+/**
+ * Update preferences based on recent events/outcomes.
+ * Called each tick after events are processed.
+ */
+export function updatePreferences(
+  entity: EntityState,
+  events: SimEvent[],
+  tick: number
+): void {
+  if (!entity.alive) return;
+  if (!entity.preferences) entity.preferences = {};
+
+  for (const event of events) {
+    // Eating cooked food → boost cooking preference
+    if (event.type === "FOOD_EATEN" && (event as any).entityId === entity.id) {
+      const item = (event as any).item as string;
+      if (item === "roast_berry" || item === "dry_berry") {
+        adjustPreference(entity, "cook", PREFERENCE_INCREMENT * 2);
+      }
+    }
+
+    // HP gained in shelter → boost shelter preference
+    if (event.type === "HP_CHANGED" && (event as any).entityId === entity.id) {
+      const cause = (event as any).cause as string;
+      const gained = (event as any).newHp > (event as any).oldHp;
+      if (gained && (cause === "rest_in_hut" || cause === "rest_in_shelter")) {
+        adjustPreference(entity, "shelter", PREFERENCE_INCREMENT * 2);
+        if (cause === "rest_in_hut") {
+          adjustPreference(entity, "hut", PREFERENCE_INCREMENT * 2);
+        }
+      }
+    }
+
+    // HP lost from exposure → boost shelter preference
+    if (event.type === "HP_CHANGED" && (event as any).entityId === entity.id) {
+      const cause = (event as any).cause as string;
+      const lost = (event as any).newHp < (event as any).oldHp;
+      if (lost && cause === "exposure") {
+        adjustPreference(entity, "shelter", PREFERENCE_INCREMENT);
+      }
+    }
+
+    // HP lost from starvation → boost stockpile preference
+    if (event.type === "HP_CHANGED" && (event as any).entityId === entity.id) {
+      const cause = (event as any).cause as string;
+      const lost = (event as any).newHp < (event as any).oldHp;
+      if (lost && cause === "starvation") {
+        adjustPreference(entity, "stockpile", PREFERENCE_INCREMENT);
+      }
+    }
+
+    // Successful build → boost relevant preference
+    if (event.type === "STRUCTURE_BUILT" && (event as any).entityId === entity.id) {
+      const structureType = (event as any).structureType as string;
+      if (structureType === "hut") {
+        adjustPreference(entity, "hut", PREFERENCE_INCREMENT * 3);
+        adjustPreference(entity, "shelter", PREFERENCE_INCREMENT);
+      } else if (structureType === "lean_to") {
+        adjustPreference(entity, "shelter", PREFERENCE_INCREMENT * 2);
+      } else if (structureType === "fire_pit") {
+        adjustPreference(entity, "cook", PREFERENCE_INCREMENT);
+      }
+    }
+  }
+}
+
+function adjustPreference(entity: EntityState, category: string, delta: number): void {
+  if (!entity.preferences) entity.preferences = {};
+  const current = entity.preferences[category] ?? 0;
+  entity.preferences[category] = Math.max(-MAX_PREFERENCE, Math.min(MAX_PREFERENCE, current + delta));
+}
+
+// ── Home Claiming (MVP-02X) ────────────────────────────────────
+
+import { StructureId, StructureState } from "@project-god/shared";
+
+/**
+ * Attempt to claim a hut as home for this entity (and household).
+ * Returns events for the claim.
+ */
+export function claimHome(
+  entity: EntityState,
+  structureId: StructureId,
+  structure: StructureState,
+  tick: number
+): SimEvent[] {
+  if (!entity.alive) return [];
+  if (structure.type !== "hut") return [];
+
+  entity.homeStructureId = structureId;
+  entity.campPosition = { ...structure.position };
+
+  // If entity has spouse, they share the home
+  // (handled by caller checking spouseId)
+
+  return [{
+    type: "HOME_CLAIMED",
+    tick,
+    entityId: entity.id,
+    structureId,
+    householdId: entity.householdId ?? entity.id,
+  } as unknown as SimEvent];
+}
+
