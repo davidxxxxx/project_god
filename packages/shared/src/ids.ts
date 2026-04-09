@@ -10,6 +10,7 @@ export type EntityId = Brand<string, "EntityId">;
 export type TribeId = Brand<string, "TribeId">;
 export type TileId = Brand<string, "TileId">;
 export type ResourceNodeId = Brand<string, "ResourceNodeId">;
+export type StructureId = Brand<string, "StructureId">;
 
 /** Construct a TileId from grid coordinates. Canonical key format. */
 export function tileKey(x: number, y: number): TileId {

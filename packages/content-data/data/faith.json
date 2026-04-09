@@ -1,0 +1,29 @@
+{
+  "INITIAL_FAITH": 10,
+  "MIN_PRAYER_FAITH": 5,
+  "PRAYER_COOLDOWN": 20,
+  "PRAYER_DURATION": 3,
+  "PRAYER_RESPONSE_WINDOW": 10,
+  "FAITH_GAIN_ON_MIRACLE": 15,
+  "FAITH_GAIN_WITNESS": 5,
+  "FAITH_DECAY_UNANSWERED": 5,
+  "FAITH_DECAY_PER_YEAR": 1,
+  "DIVINE_POINTS_INITIAL": 5,
+  "DIVINE_POINTS_MAX": 20,
+  "DIVINE_REGEN_PER_PRAYER": 0.5,
+  "BLESS_COST": 1,
+  "HEAL_COST": 1,
+  "RAIN_COST": 3,
+  "BOUNTY_COST": 3,
+  "BLESS_HUNGER_RESTORE": 30,
+  "BLESS_THIRST_RESTORE": 30,
+  "RAIN_WATER_RESTORE": 50,
+  "BOUNTY_BERRY_RESTORE": 20,
+  "_comments": {
+    "PRAYER_COOLDOWN": "Ticks between successive prayers by same entity.",
+    "PRAYER_DURATION": "Ticks the entity remains in prayer state.",
+    "PRAYER_RESPONSE_WINDOW": "Ticks after prayer completes to await divine response.",
+    "DIVINE_REGEN_PER_PRAYER": "Divine points gained per tick per actively praying entity.",
+    "FAITH_DECAY_PER_YEAR": "Faith lost per TICKS_PER_YEAR cycle (natural erosion)."
+  }
+}

@@ -12,8 +12,10 @@
     "test": "echo \"Passed\""
   },
   "dependencies": {
+    "@project-god/core-sim": "workspace:*",
     "@project-god/shared": "workspace:*",
-    "@project-god/core-sim": "workspace:*"
+    "@project-god/narrative-runtime": "workspace:*",
+    "pixi.js": "^8.17.1"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

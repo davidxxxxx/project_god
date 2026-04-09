@@ -1,0 +1,43 @@
+{
+  "fire_sacred": {
+    "description": "Fire is a sacred gift — letting it die is a transgression.",
+    "type": "taboo",
+    "triggeredBy": "STRUCTURE_BUILT",
+    "triggerCondition": { "structureType": "fire_pit" },
+    "faithThreshold": 8,
+    "initialStrength": 50,
+    "violatedBy": "STRUCTURE_EXPIRED",
+    "violationCondition": { "structureType": "fire_pit" },
+    "_comment": "Forms when tribe builds first fire pit. Violated when fire expires."
+  },
+  "share_food": {
+    "description": "The hungry must be fed — hoarding food is shameful.",
+    "type": "commandment",
+    "triggeredBy": "ITEM_DROPPED",
+    "triggerCondition": { "itemType": "berry" },
+    "faithThreshold": 10,
+    "initialStrength": 40,
+    "violatedBy": null,
+    "_comment": "Forms when an agent drops berries (sharing). No specific violation check."
+  },
+  "honor_the_dead": {
+    "description": "When a tribesman falls, the living must pause to remember.",
+    "type": "tradition",
+    "triggeredBy": "ENTITY_DIED",
+    "triggerCondition": {},
+    "faithThreshold": 5,
+    "initialStrength": 45,
+    "violatedBy": null,
+    "_comment": "Forms after first tribal death. Reinforced by subsequent deaths."
+  },
+  "divine_bounty": {
+    "description": "The god provides — give thanks through prayer when blessed.",
+    "type": "commandment",
+    "triggeredBy": "MIRACLE_PERFORMED",
+    "triggerCondition": {},
+    "faithThreshold": 8,
+    "initialStrength": 55,
+    "violatedBy": null,
+    "_comment": "Forms after a miracle. Encourages prayer behavior."
+  }
+}

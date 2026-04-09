@@ -1,0 +1,30 @@
+{
+  "fire_pit": {
+    "displayName": "Fire Pit",
+    "requiredItems": { "berry": 2 },
+    "buildRange": 0,
+    "initialDurability": 50,
+    "fuelPerTick": 1,
+    "effectRadius": 2,
+    "effects": ["warming"]
+  },
+  "lean_to": {
+    "displayName": "Lean-To Shelter",
+    "requiredItems": { "berry": 2 },
+    "buildRange": 0,
+    "initialDurability": 60,
+    "fuelPerTick": 0.5,
+    "effectRadius": 1,
+    "effects": ["sheltered"]
+  },
+  "shrine": {
+    "displayName": "Tribal Shrine",
+    "requiredItems": { "berry": 3 },
+    "buildRange": 0,
+    "initialDurability": 1000,
+    "fuelPerTick": 0,
+    "effectRadius": 3,
+    "effects": ["spiritual_focus"],
+    "isSpiritualCenter": true
+  }
+}

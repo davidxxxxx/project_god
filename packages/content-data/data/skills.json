@@ -1,0 +1,18 @@
+{
+  "fire_making": {
+    "displayName": "Fire Making",
+    "description": "The ability to create and maintain fire",
+    "learnMethod": "observation",
+    "learnTicks": 5,
+    "initialProficiency": 0.5,
+    "maxProficiency": 1.0
+  },
+  "spiritual_awareness": {
+    "displayName": "Spiritual Awareness",
+    "description": "Understanding of the divine and ability to lead rituals",
+    "learnMethod": "innate",
+    "learnTicks": 10,
+    "initialProficiency": 0.5,
+    "maxProficiency": 1.0
+  }
+}

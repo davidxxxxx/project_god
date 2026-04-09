@@ -9,11 +9,15 @@ export type ActionType =
   | "gather"
   | "eat"
   | "drink"
+  | "drop"
   // Future phases:
   | "rest"
   | "pray"
   | "build"
-  | "research";
+  | "research"
+  // MVP-07A: Priest rituals
+  | "perform_ritual"
+  | "participate_ritual";
 
 // ─── ActionIntent ────────────────────────────────────────────
 // agent-runtime produces these. It is a REQUEST, not a mutation.

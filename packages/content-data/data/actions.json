@@ -3,5 +3,7 @@
   "move": { "range": 1 },
   "gather": { "range": 1 },
   "eat": { "requiresInventory": "berry" },
-  "drink": { "requiresInventory": "water" }
+  "drink": { "requiresInventory": "water" },
+  "perform_ritual": { "range": 1 },
+  "participate_ritual": { "range": 3 }
 }

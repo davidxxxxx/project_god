@@ -8,13 +8,14 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "lint": "echo \"Passed\"",
-    "test": "echo \"Passed\""
+    "test": "vitest run"
   },
   "dependencies": {
     "@project-god/shared": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
   }
 }

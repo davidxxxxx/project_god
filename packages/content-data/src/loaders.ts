@@ -11,11 +11,19 @@ import {
   AttributesFileSchema,
   ActionsFileSchema,
   TerrainFileSchema,
+  InventoryConfigFileSchema,
+  StructuresFileSchema,
+  SkillsFileSchema,
+  TechnologiesFileSchema,
   type NeedDef,
   type ResourceDef,
   type AttributeDef,
   type ActionDef,
   type TerrainDef,
+  type InventoryConfig,
+  type StructureContentDef,
+  type SkillContentDef,
+  type TechnologyContentDef,
 } from "./schema";
 
 const DATA_DIR = path.resolve(__dirname, "../data");
@@ -46,6 +54,22 @@ export function loadTerrain(): Record<string, TerrainDef> {
   return loadAndParse("terrain.json", TerrainFileSchema);
 }
 
+export function loadInventoryConfig(): InventoryConfig {
+  return loadAndParse("inventory.json", InventoryConfigFileSchema);
+}
+
+export function loadStructures(): Record<string, StructureContentDef> {
+  return loadAndParse("structures.json", StructuresFileSchema);
+}
+
+export function loadSkills(): Record<string, SkillContentDef> {
+  return loadAndParse("skills.json", SkillsFileSchema);
+}
+
+export function loadTechnologies(): Record<string, TechnologyContentDef> {
+  return loadAndParse("technologies.json", TechnologiesFileSchema);
+}
+
 /** Load and validate ALL content. Throws on first failure. */
 export function loadAllContent() {
   return {
@@ -54,5 +78,9 @@ export function loadAllContent() {
     attributes: loadAttributes(),
     actions: loadActions(),
     terrain: loadTerrain(),
+    inventory: loadInventoryConfig(),
+    structures: loadStructures(),
+    skills: loadSkills(),
+    technologies: loadTechnologies(),
   };
 }

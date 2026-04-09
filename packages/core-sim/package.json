@@ -11,7 +11,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@project-god/shared": "workspace:*"
+    "@project-god/shared": "workspace:*",
+    "@project-god/agent-runtime": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

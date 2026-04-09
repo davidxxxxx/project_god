@@ -12,19 +12,46 @@
     <header id="top-bar">
       <div class="info">
         <span id="tick-display">Tick: 0</span>
+        <span id="time-display" class="time-info">Day 0 · Year 0</span>
         <span id="seed-display">Seed: —</span>
-        <span id="status-display" class="status-badge">READY</span>
+        <span id="status-display" class="status-badge">PAUSED</span>
+        <span id="interruption-display" class="interruption-badge"></span>
       </div>
       <div class="controls">
         <button id="btn-step" title="Step 1 tick">⏭ Step</button>
-        <button id="btn-run" title="Run continuously">▶ Run</button>
-        <button id="btn-pause" title="Pause" disabled>⏸ Pause</button>
+        <button id="btn-play-pause" title="Play / Pause">▶ Play</button>
         <button id="btn-reset" title="Reset scenario">↺ Reset</button>
-        <label class="speed-label">Speed
-          <input id="speed-slider" type="range" min="1" max="20" value="5">
+
+        <div id="speed-group" class="speed-buttons">
+          <button class="speed-btn active" data-speed="1x">1×</button>
+          <button class="speed-btn" data-speed="2x">2×</button>
+          <button class="speed-btn" data-speed="4x">4×</button>
+          <button class="speed-btn" data-speed="8x">8×</button>
+          <button class="speed-btn" data-speed="16x">16×</button>
+        </div>
+
+        <div id="ff-group" class="ff-buttons">
+          <button class="ff-btn" data-target="next_prayer" title="Skip to next prayer">⏩🙏</button>
+          <button class="ff-btn" data-target="next_birth" title="Skip to next birth">⏩👶</button>
+          <button class="ff-btn" data-target="next_death" title="Skip to next death">⏩☠️</button>
+          <button class="ff-btn" data-target="next_invention" title="Skip to next invention">⏩🧠</button>
+        </div>
+
+        <label id="auto-pause-toggle" class="auto-toggle" title="Auto pause on key events">
+          <input type="checkbox" id="chk-auto-pause" checked>
+          <span>Auto⏸</span>
         </label>
       </div>
     </header>
+
+    <!-- Divine Panel (MVP-05 & MVP-06C Oracle) -->
+    <div id="divine-panel">
+      <span id="divine-points">✨ Divine: 5/20</span>
+      <form id="oracle-form" class="oracle-input-group" onsubmit="return false;">
+        <input type="text" id="oracle-input" placeholder="Type your Divine Will... (e.g. 'Heal the child')" autocomplete="off" />
+        <button type="submit" id="btn-oracle" title="Cast Divine Will">✨ Cast</button>
+      </form>
+    </div>
 
     <!-- Main Grid -->
     <main id="main-grid">
@@ -34,17 +61,30 @@
         <div id="agent-list"></div>
       </aside>
 
-      <!-- Center: Map -->
+      <!-- Center: Map (PixiJS Canvas) -->
       <section id="map-panel">
         <h2>World Map</h2>
-        <div id="map-grid"></div>
+        <div id="pixi-container"></div>
+        <!-- Narrative toast overlay (MVP-06A) -->
+        <div id="narrative-toast" class="narrative-toast hidden"></div>
       </section>
 
-      <!-- Right: Event Log -->
+      <!-- Right: Event Log + Chronicle (tabbed) -->
       <aside id="event-panel">
-        <h2>Event Log</h2>
-        <div id="event-filters"></div>
-        <div id="event-log"></div>
+        <div class="panel-tabs">
+          <button class="panel-tab active" data-tab="events">Event Log</button>
+          <button class="panel-tab" data-tab="chronicle">📜 Chronicle</button>
+        </div>
+        <div id="tab-events" class="tab-content active">
+          <div id="event-filters"></div>
+          <div id="event-log"></div>
+        </div>
+        <div id="tab-chronicle" class="tab-content">
+          <div class="chronicle-actions">
+            <button id="btn-inscribe-era" title="Summarize recent history with the Historian Engine">✒️ Inscribe Era</button>
+          </div>
+          <div id="chronicle-log"></div>
+        </div>
       </aside>
     </main>
 
@@ -60,6 +100,16 @@
         <span id="metric-gathers">Gathers: —</span>
         <span id="metric-eats">Eats: —</span>
         <span id="metric-drinks">Drinks: —</span>
+        <span id="metric-builds">Builds: —</span>
+        <span id="metric-structures">🔥 0/0</span>
+        <span id="metric-skills">🧠 0 skilled</span>
+        <span id="metric-techs">Skills: 0 | Tech: 0</span>
+        <span id="metric-tribe">⛺ No tribe</span>
+        <span id="metric-environment">🌞 Day | 🌡️ —°</span>
+        <span id="metric-shelters">🛖 0 shelters</span>
+        <span id="metric-knowledge">🧠 0 facts | 📜 0 cultural</span>
+        <span id="metric-population">👶 0 children | 👴 0 elders | 💍 0 bonds</span>
+        <span id="metric-faith">🙏 0 praying | ✨ 0 miracles</span>
       </div>
     </footer>
   </div>

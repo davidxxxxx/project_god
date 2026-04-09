@@ -14,7 +14,12 @@ export function executeGather(
 
   const resDef = resources[node.resourceType];
   const gatherAmount = resDef?.gatherAmount ?? 1;
-  const actual = Math.min(gatherAmount, node.quantity);
+  // Clamp to both node supply and remaining inventory capacity
+  const capacity = entity.inventoryCapacity ?? 10;
+  const currentTotal = Object.values(entity.inventory).reduce((sum, qty) => sum + qty, 0);
+  const remainingCapacity = Math.max(0, capacity - currentTotal);
+  const actual = Math.min(gatherAmount, node.quantity, remainingCapacity);
+  if (actual <= 0) return [];
 
   node.quantity -= actual;
   entity.inventory[node.resourceType] = (entity.inventory[node.resourceType] ?? 0) + actual;

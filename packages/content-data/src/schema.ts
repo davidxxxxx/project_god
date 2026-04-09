@@ -56,3 +56,74 @@ export const TerrainDefSchema = z.object({
 });
 export const TerrainFileSchema = z.record(z.string(), TerrainDefSchema);
 export type TerrainDef = z.infer<typeof TerrainDefSchema>;
+
+// ─── inventory.json ──────────────────────────────────────────
+
+export const ItemDefSchema = z.object({
+  displayName: z.string().min(1),
+  weight: z.number().positive(),
+  stackLimit: z.number().int().positive(),
+});
+export type ItemDef = z.infer<typeof ItemDefSchema>;
+
+export const InventoryConfigSchema = z.object({
+  /** Default carrying capacity for entities. */
+  defaultCapacity: z.number().int().positive(),
+  items: z.record(z.string(), ItemDefSchema),
+});
+export const InventoryConfigFileSchema = InventoryConfigSchema;
+export type InventoryConfig = z.infer<typeof InventoryConfigSchema>;
+
+// ─── structures.json ─────────────────────────────────────────
+
+export const StructureDefSchema = z.object({
+  displayName: z.string().min(1),
+  /** Items consumed from inventory to build. key = item type, value = quantity. */
+  requiredItems: z.record(z.string(), z.number().int().positive()),
+  /** Manhattan range from entity for build placement. 0 = build at own position. */
+  buildRange: z.number().int().nonnegative(),
+  /** Starting durability (fuel ticks for fire-type structures). */
+  initialDurability: z.number().int().positive(),
+  /** Durability consumed per tick while active. */
+  fuelPerTick: z.number().nonnegative(),
+  /** Manhattan radius for area effects. */
+  effectRadius: z.number().int().nonnegative(),
+  /** Status effects applied to nearby entities. */
+  effects: z.array(z.string()),
+  /** Whether this structure acts as a focal point for rituals/spiritual gathering. */
+  isSpiritualCenter: z.boolean().optional(),
+});
+export const StructuresFileSchema = z.record(z.string(), StructureDefSchema);
+export type StructureContentDef = z.infer<typeof StructureDefSchema>;
+
+// ─── skills.json (MVP-02-D) ──────────────────────────────────
+
+export const SkillDefSchema = z.object({
+  displayName: z.string().min(1),
+  description: z.string().optional(),
+  /** How this skill is acquired. */
+  learnMethod: z.enum(["observation", "practice", "innate"]),
+  /** Ticks of observation/practice needed to learn. */
+  learnTicks: z.number().int().positive(),
+  /** Proficiency level when first learned (0–1). */
+  initialProficiency: z.number().min(0).max(1),
+  /** Maximum proficiency (0–1). */
+  maxProficiency: z.number().min(0).max(1),
+});
+export const SkillsFileSchema = z.record(z.string(), SkillDefSchema);
+export type SkillContentDef = z.infer<typeof SkillDefSchema>;
+
+// ─── technologies.json (MVP-02-D) ────────────────────────────
+
+export const TechnologyDefSchema = z.object({
+  displayName: z.string().min(1),
+  description: z.string().optional(),
+  /** Skill id that tribe members need to contribute. */
+  requiredSkill: z.string().min(1),
+  /** Minimum number of skilled members to unlock. */
+  minSkilledMembers: z.number().int().positive(),
+  /** Structures that become buildable once unlocked. */
+  unlocksStructures: z.array(z.string()),
+});
+export const TechnologiesFileSchema = z.record(z.string(), TechnologyDefSchema);
+export type TechnologyContentDef = z.infer<typeof TechnologyDefSchema>;

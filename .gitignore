@@ -11,6 +11,8 @@ __pycache__/
 node_modules/
 dist/
 .env
+.env.local
+.env.*.local
 
 # Save outputs
 save_data/

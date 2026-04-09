@@ -4,22 +4,27 @@
  */
 
 import {
-  WorldState, ActionIntent, EntityState,
+  WorldState, ActionIntent, EntityState, TribeState,
   TickResult, DebugProjection, ScenarioRunResult,
-  TickMetrics, SimulationMetrics, manhattan, ResourceNodeState,
+  TickMetrics, SimulationMetrics, RunSummary,
+  manhattan, ResourceNodeState, SimEvent, SimEventType,
 } from "@project-god/shared";
 import { createWorld, type WorldConfig } from "./create-world";
 import { tickWorld, type TickContext } from "./tick";
 import { buildProjection } from "./snapshot";
 import { buildTickMetrics, aggregateMetrics } from "./metrics";
+import { performMiracle as applyMiracle, type MiracleRequest } from "./systems/faith-tick";
 
 export type DecisionFn = (entityId: string, world: WorldState) => ActionIntent;
+export type PostTickHook = (world: WorldState, result: TickResult) => void;
 
 export interface ScenarioConfig {
   id: string;
   worldConfig: WorldConfig;
   tickContext: TickContext;
   decideFn: DecisionFn;
+  /** Optional hook called after each tick for memory updates etc. */
+  postTickHook?: PostTickHook;
 }
 
 export class ScenarioRunner {
@@ -45,6 +50,11 @@ export class ScenarioRunner {
 
     const result = tickWorld(this.world, intents, this.config.tickContext);
     this.world = result.world;
+
+    // ── Memory update hook (MVP-02) ───────────────────────
+    if (this.config.postTickHook) {
+      this.config.postTickHook(this.world, result);
+    }
 
     this.tickHistory.push(result);
     if (this.tickHistory.length > this.maxHistory) {
@@ -102,6 +112,96 @@ export class ScenarioRunner {
     this.tickHistory = [];
     this.metricsHistory = [];
   }
+
+  /**
+   * Perform a divine miracle (MVP-05).
+   * This is the player's active input — it mutates world state directly.
+   * Returns the events generated and whether the miracle succeeded.
+   */
+  performMiracle(request: MiracleRequest): { events: SimEvent[]; success: boolean } {
+    const faithCfg = this.config.tickContext.faith;
+    if (!faithCfg) return { events: [], success: false };
+    return applyMiracle(request, this.world, faithCfg);
+  }
+
+  /**
+   * Run ticks until a matching event type appears, or maxTicks reached.
+   * Used by TimeController for fast-forward.
+   *
+   * Returns all tick results, whether a target was found, and the trigger event.
+   * Also stops early if all agents die.
+   */
+  stepUntil(
+    targetEventTypes: SimEventType[],
+    maxTicks: number = 2000
+  ): { results: TickResult[]; found: boolean; triggerEvent?: SimEvent; ticksRan: number } {
+    const results: TickResult[] = [];
+    const targetSet = new Set(targetEventTypes);
+    let found = false;
+    let triggerEvent: SimEvent | undefined;
+
+    for (let i = 0; i < maxTicks; i++) {
+      // Check if all agents are dead before stepping
+      const entities = Object.values(this.world.entities) as EntityState[];
+      if (entities.every((e) => !e.alive) && this.world.tick > 0) break;
+
+      const result = this.step();
+      results.push(result);
+
+      // Check if any emitted event matches a target
+      for (const ev of result.events) {
+        if (targetSet.has(ev.type)) {
+          found = true;
+          triggerEvent = ev;
+          break;
+        }
+      }
+      if (found) break;
+    }
+
+    return { results, found, triggerEvent, ticksRan: results.length };
+  }
+
+  /**
+   * Run until a termination condition is met.
+   * Stops when all agents are dead OR maxTick is reached.
+   */
+  runUntilDone(maxTick: number): RunSummary {
+    while (this.world.tick < maxTick) {
+      const entities = Object.values(this.world.entities) as EntityState[];
+      const allDead = entities.every((e) => !e.alive);
+      if (allDead && this.world.tick > 0) {
+        return this.buildRunSummary("all_dead");
+      }
+      this.step();
+    }
+    return this.buildRunSummary("max_tick");
+  }
+
+  private buildRunSummary(reason: RunSummary["terminationReason"]): RunSummary {
+    const metrics = aggregateMetrics(this.metricsHistory);
+    const entities = Object.values(this.world.entities) as EntityState[];
+    const resources = Object.values(this.world.resourceNodes) as ResourceNodeState[];
+
+    return {
+      terminationReason: reason,
+      seed: this.world.seed,
+      totalTicks: this.world.tick,
+      aliveCount: entities.filter((e) => e.alive).length,
+      deadCount: entities.filter((e) => !e.alive).length,
+      firstDeathTick: metrics.firstDeathTick,
+      totalGathers: metrics.totalGathers,
+      totalEats: metrics.totalEats,
+      totalDrinks: metrics.totalDrinks,
+      totalRejections: metrics.totalRejections,
+      remainingBerries: resources
+        .filter((r) => r.resourceType === "berry")
+        .reduce((sum, r) => sum + r.quantity, 0),
+      remainingWater: resources
+        .filter((r) => r.resourceType === "water")
+        .reduce((sum, r) => sum + Math.min(r.quantity, 999), 0),
+    };
+  }
 }
 
 // ─── Built-in survival decision function ───────────────────
@@ -150,4 +250,75 @@ function findNearest(self: EntityState, resources: ResourceNodeState[], type: st
   return resources
     .filter((r) => r.resourceType === type)
     .sort((a, b) => manhattan(self.position, a.position) - manhattan(self.position, b.position))[0];
+}
+
+// ─── Memory-aware decision function (MVP-02) ────────────────
+
+import {
+  perceive, memoryAwarePolicy,
+  updateMemoryFromEvents, enrichEventsWithPositions,
+  updateSocialMemory,
+  distillSemanticMemory, decaySemanticMemory,
+  teachToCulturalMemory, inheritFromCulturalMemory, decayCulturalMemory,
+} from "@project-god/agent-runtime";
+
+/**
+ * Creates a memory-aware decision function (MVP-02).
+ * Uses episodic memory for resource recall and task tracking.
+ */
+export function defaultMemoryDecision(
+  needsConfig: Record<string, { max: number; criticalThreshold: number }>
+): DecisionFn {
+  return (entityId: string, world: WorldState): ActionIntent => {
+    const snapshot = perceive(entityId, world);
+    return memoryAwarePolicy(snapshot, needsConfig, world.tick);
+  };
+}
+
+/**
+ * Creates a post-tick hook that updates entity memories from tick events.
+ * MVP-02-E: also updates social memory from perception.
+ * MVP-03-B: adds semantic distillation, cultural teaching/inheritance.
+ * Pass this as postTickHook to ScenarioConfig.
+ */
+export function defaultPostTickMemoryHook(): PostTickHook {
+  return (world: WorldState, result: TickResult): void => {
+    // Enrich events with resource node positions
+    const enriched = enrichEventsWithPositions(result.events, world.resourceNodes);
+
+    // Update memory for each alive entity
+    for (const entity of Object.values(world.entities) as EntityState[]) {
+      if (!entity.alive) continue;
+      updateMemoryFromEvents(entity, enriched, world.tick);
+
+      // Social memory update (MVP-02-E): perceive nearby entities
+      const snapshot = perceive(entity.id, world);
+      updateSocialMemory(entity, snapshot.nearbyEntities, world.tick);
+
+      // Semantic distillation (MVP-03-B): episodic → semantic
+      distillSemanticMemory(entity, world.tick);
+
+      // Semantic decay (MVP-03-B): fade unreinforced knowledge
+      decaySemanticMemory(entity, world.tick);
+
+      // Cultural teaching + inheritance (MVP-03-B)
+      if (world.tribes && entity.tribeId) {
+        const tribe = world.tribes[entity.tribeId] as TribeState | undefined;
+        if (tribe) {
+          const hasNearbyTribeMember = snapshot.nearbyEntities.some(
+            (ne: any) => ne.tribeId === entity.tribeId
+          );
+          teachToCulturalMemory(entity, tribe, hasNearbyTribeMember, world.tick);
+          inheritFromCulturalMemory(entity, tribe, hasNearbyTribeMember, world.tick);
+        }
+      }
+    }
+
+    // Cultural memory decay (MVP-03-B): per tribe
+    if (world.tribes) {
+      for (const tribe of Object.values(world.tribes) as TribeState[]) {
+        decayCulturalMemory(tribe, world.tick);
+      }
+    }
+  };
 }

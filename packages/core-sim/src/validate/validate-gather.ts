@@ -1,5 +1,8 @@
 import { ActionIntent, RejectedAction, ValidatedAction, WorldState, manhattan } from "@project-god/shared";
 
+/** Default inventory capacity if not set on entity. */
+const DEFAULT_INVENTORY_CAPACITY = 10;
+
 export function validateGather(
   intent: ActionIntent,
   world: WorldState,
@@ -22,6 +25,13 @@ export function validateGather(
 
   if (manhattan(entity.position, node.position) > gatherRange) {
     return { kind: "rejected", intent, reason: "Entity is too far from resource node to gather" };
+  }
+
+  // ── Inventory capacity check (MVP-02) ─────────────────────
+  const capacity = entity.inventoryCapacity ?? DEFAULT_INVENTORY_CAPACITY;
+  const currentTotal = Object.values(entity.inventory).reduce((sum, qty) => sum + qty, 0);
+  if (currentTotal >= capacity) {
+    return { kind: "rejected", intent, reason: "Inventory is full" };
   }
 
   return { kind: "validated", intent, energyCost: 10, timeCost: 2 };

@@ -9,7 +9,7 @@
   "thirst": {
     "max": 100,
     "initial": 80,
-    "decayPerTick": 2,
+    "decayPerTick": 1.5,
     "deathThreshold": 0,
     "criticalThreshold": 25
   },
@@ -19,5 +19,13 @@
     "decayPerTick": 0,
     "deathThreshold": -1,
     "criticalThreshold": 20
+  },
+  "exposure": {
+    "max": 100,
+    "initial": 100,
+    "decayPerTick": 0,
+    "deathThreshold": 0,
+    "criticalThreshold": 30,
+    "_note": "Decay is conditional (temperature-driven). Handled in decayNeeds() not via flat decayPerTick."
   }
 }

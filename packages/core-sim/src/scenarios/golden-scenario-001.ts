@@ -8,8 +8,10 @@ const TERRAIN = {
 
 const NEEDS = {
   hunger:  { max: 100, initial: 80, decayPerTick: 1, deathThreshold: 0, criticalThreshold: 25 },
-  thirst:  { max: 100, initial: 80, decayPerTick: 2, deathThreshold: 0, criticalThreshold: 25 },
+  thirst:  { max: 100, initial: 80, decayPerTick: 1.5, deathThreshold: 0, criticalThreshold: 25 },
   fatigue: { max: 100, initial: 0, decayPerTick: 0, deathThreshold: -1, criticalThreshold: 20 },
+  // exposure: conditional decay driven by temperature (decayPerTick=0, handled in decayNeeds)
+  exposure: { max: 100, initial: 100, decayPerTick: 0, deathThreshold: 0, criticalThreshold: 30 },
 };
 
 const RESOURCES = {
@@ -20,6 +22,28 @@ const RESOURCES = {
 const ACTIONS = {
   idle: { range: 0 }, move: { range: 1 }, gather: { range: 1 },
   eat: { requiresInventory: "berry" }, drink: { requiresInventory: "water" },
+  build: { range: 0 },
+};
+
+const STRUCTURES = {
+  fire_pit: {
+    displayName: "Fire Pit",
+    requiredItems: { berry: 2 },
+    buildRange: 0,
+    initialDurability: 50,
+    fuelPerTick: 1,
+    effectRadius: 2,
+    effects: ["warming"],
+  },
+  lean_to: {
+    displayName: "Lean-To Shelter",
+    requiredItems: { berry: 2 },
+    buildRange: 0,
+    initialDurability: 60,
+    fuelPerTick: 0.5,
+    effectRadius: 1,
+    effects: ["sheltered"],
+  },
 };
 
 export const GOLDEN_WORLD_CONFIG: WorldConfig = {
@@ -39,11 +63,74 @@ export const GOLDEN_WORLD_CONFIG: WorldConfig = {
   ],
 };
 
+const SKILLS = {
+  fire_making: {
+    displayName: "Fire Making",
+    learnMethod: "observation" as const,
+    learnTicks: 5,
+    initialProficiency: 0.5,
+    maxProficiency: 1.0,
+  },
+};
+
+const TECHNOLOGIES = {
+  controlled_fire: {
+    displayName: "Controlled Fire",
+    requiredSkill: "fire_making",
+    minSkilledMembers: 2,
+    unlocksStructures: ["fire_pit"],
+  },
+};
+
+// MVP-04: Lifecycle configuration — values must match content-data/data/lifecycle.json
+import type { LifecycleDef, FaithDef } from "../content-types";
+const LIFECYCLE: LifecycleDef = {
+  TICKS_PER_YEAR: 40,
+  ADULTHOOD_AGE: 15,
+  ELDER_AGE_RATIO: 0.75,
+  DEFAULT_MAX_AGE: 70,
+  MAX_AGE_VARIANCE: 10,
+  BIRTH_COOLDOWN_YEARS: 4,
+  MIN_BIRTH_HUNGER: 40,
+  CHILD_FOLLOW_RADIUS: 2,
+  PAIRING_MIN_TRUST: 0.5,
+  PAIRING_MIN_AGE: 16,
+  ATTRIBUTE_MUTATION_RANGE: 2,
+};
+
+// MVP-05: Faith configuration — values must match content-data/data/faith.json
+const FAITH: FaithDef = {
+  INITIAL_FAITH: 10,
+  MIN_PRAYER_FAITH: 5,
+  PRAYER_COOLDOWN: 20,
+  PRAYER_DURATION: 3,
+  PRAYER_RESPONSE_WINDOW: 10,
+  FAITH_GAIN_ON_MIRACLE: 15,
+  FAITH_GAIN_WITNESS: 5,
+  FAITH_DECAY_UNANSWERED: 5,
+  FAITH_DECAY_PER_YEAR: 1,
+  DIVINE_POINTS_INITIAL: 5,
+  DIVINE_POINTS_MAX: 20,
+  DIVINE_REGEN_PER_PRAYER: 0.5,
+  BLESS_COST: 1,
+  HEAL_COST: 1,
+  RAIN_COST: 3,
+  BOUNTY_COST: 3,
+  BLESS_HUNGER_RESTORE: 30,
+  BLESS_THIRST_RESTORE: 30,
+  RAIN_WATER_RESTORE: 50,
+  BOUNTY_BERRY_RESTORE: 20,
+};
+
 export const GOLDEN_TICK_CONTEXT: TickContext = {
   needs: NEEDS, resources: RESOURCES, actions: ACTIONS, terrain: TERRAIN,
+  structures: STRUCTURES, skills: SKILLS, technologies: TECHNOLOGIES,
+  lifecycle: LIFECYCLE,
+  faith: FAITH,
 };
 
 export const GOLDEN_NEEDS_CONFIG = {
   hunger: { max: NEEDS.hunger.max, criticalThreshold: NEEDS.hunger.criticalThreshold },
   thirst: { max: NEEDS.thirst.max, criticalThreshold: NEEDS.thirst.criticalThreshold },
+  exposure: { max: NEEDS.exposure.max, criticalThreshold: NEEDS.exposure.criticalThreshold },
 };

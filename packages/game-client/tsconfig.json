@@ -5,7 +5,10 @@
     "baseUrl": ".",
     "paths": {
       "@project-god/shared": ["../shared/src"],
-      "@project-god/core-sim": ["../core-sim/src"]
+      "@project-god/core-sim": ["../core-sim/src"],
+      "@project-god/narrative-runtime": ["../narrative-runtime/src"],
+      "@project-god/agent-runtime": ["../agent-runtime/src"],
+      "@project-god/content-data": ["../content-data/src"]
     }
   },
   "include": ["src/**/*"]

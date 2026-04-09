@@ -1,0 +1,15 @@
+{
+  "defaultCapacity": 10,
+  "items": {
+    "berry": {
+      "displayName": "Berry",
+      "weight": 1,
+      "stackLimit": 5
+    },
+    "water": {
+      "displayName": "Water Skin",
+      "weight": 1,
+      "stackLimit": 3
+    }
+  }
+}

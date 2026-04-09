@@ -1,8 +1,9 @@
 import {
-  WorldState, TileState, EntityState, ResourceNodeState,
+  WorldState, TileState, EntityState, ResourceNodeState, TribeState, EnvironmentState,
   EntityId, TileId, ResourceNodeId, TribeId, Vec2,
   tileKey, createRNG,
 } from "@project-god/shared";
+import { calculateTemperature, calculateTimeOfDay, DEFAULT_DAY_LENGTH } from "./systems/environment-tick";
 import type { NeedDef, TerrainDef } from "./content-types";
 
 export interface WorldConfig {
@@ -64,13 +65,24 @@ export function createWorld(config: WorldConfig): WorldState {
 
     const pos = override?.positionOverride ?? { ...tile.position };
 
+    // ── MVP-04: Lifecycle fields for Gen0 ──────────────────
+    const sex = rng.next() < 0.5 ? "male" : "female";
+    const maxAge = rng.nextInt(60, 80);
+    const startAge = rng.nextInt(20, 30);
+    // bornAtTick is negative (entity "existed before" world started)
+    const bornAtTick = -(startAge * 40); // 40 = DEFAULT_DAY_LENGTH = TICKS_PER_YEAR
+
     entities[id] = {
       id, type: "human", tribeId: "tribe_0" as TribeId,
       position: pos,
-      attributes: { intelligence: 5, body: 5, faith: 0 },
+      attributes: { intelligence: 5, body: 5, faith: 10 },
       needs: needs as any,
       inventory: {},
       alive: true,
+      age: startAge,
+      sex: sex as any,
+      maxAge,
+      bornAtTick,
     };
   }
 
@@ -89,9 +101,29 @@ export function createWorld(config: WorldConfig): WorldState {
       };
     });
   }
+  // ── Create default tribe (MVP-02-E) ─────────────────────
+  const memberIds = Object.keys(entities) as EntityId[];
+  const tribes: Record<string, TribeState> = {
+    tribe_0: {
+      id: "tribe_0" as TribeId,
+      name: "First Tribe",
+      memberIds,
+      technologies: [],
+    },
+  };
+
+  // ── Initialize environment state (MVP-03-A) ──────────────
+  const environment: EnvironmentState = {
+    dayLength: DEFAULT_DAY_LENGTH,
+    temperature: calculateTemperature(0, DEFAULT_DAY_LENGTH),
+    timeOfDay: calculateTimeOfDay(0, DEFAULT_DAY_LENGTH),
+  };
 
   return {
     tick: 0, seed: config.seed, width: config.width, height: config.height,
-    rngState: rng.state, tiles, entities, resourceNodes,
+    rngState: rng.state, tiles, entities, resourceNodes, tribes, environment,
+    // MVP-05: Divine economy
+    divinePoints: 5,
+    maxDivinePoints: 20,
   };
 }

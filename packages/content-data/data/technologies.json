@@ -1,0 +1,16 @@
+{
+  "controlled_fire": {
+    "displayName": "Controlled Fire",
+    "description": "The tribe-level knowledge of fire creation and usage",
+    "requiredSkill": "fire_making",
+    "minSkilledMembers": 2,
+    "unlocksStructures": ["fire_pit"]
+  },
+  "basic_spirituality": {
+    "displayName": "Basic Spirituality",
+    "description": "The tribe's shared understanding of the divine, allowing them to construct an altar.",
+    "requiredSkill": "spiritual_awareness",
+    "minSkilledMembers": 1,
+    "unlocksStructures": ["shrine"]
+  }
+}

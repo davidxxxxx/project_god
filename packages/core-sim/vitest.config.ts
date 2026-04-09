@@ -5,6 +5,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@project-god/shared": path.resolve(__dirname, "../shared/src"),
+      "@project-god/agent-runtime": path.resolve(__dirname, "../agent-runtime/src"),
     },
   },
   test: {

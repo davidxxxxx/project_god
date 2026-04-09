@@ -70,6 +70,90 @@ body {
 .status-badge.paused  { background: rgba(255,204,51,0.15); color: var(--accent-yellow); }
 .status-badge.ready   { background: rgba(68,136,255,0.15); color: var(--accent-blue); }
 
+/* ── Divine Panel (MVP-05) ──────────────────────────────────── */
+#divine-panel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 16px;
+  background: linear-gradient(90deg, rgba(251,191,36,0.1), rgba(139,92,246,0.1));
+  border-bottom: 1px solid var(--border);
+}
+#divine-points {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: #fbbf24;
+  min-width: 150px;
+}
+.miracle-btn {
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: var(--radius);
+  border: 1px solid rgba(251,191,36,0.3);
+  background: rgba(251,191,36,0.08);
+  color: #fbbf24;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.miracle-btn:hover {
+  background: rgba(251,191,36,0.2);
+  border-color: rgba(251,191,36,0.5);
+  box-shadow: 0 0 8px rgba(251,191,36,0.3);
+}
+.miracle-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* ── Oracle Input (MVP-06C) ─────────────────────────────── */
+.oracle-input-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex: 1;
+}
+#oracle-input {
+  flex: 1;
+  background: rgba(0,0,0,0.5);
+  border: 1px solid rgba(251,191,36,0.3);
+  color: #fbbf24;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  outline: none;
+  transition: all 0.2s;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+}
+#oracle-input::placeholder {
+  color: rgba(251,191,36,0.4);
+  font-style: italic;
+}
+#oracle-input:focus {
+  border-color: #fbbf24;
+  box-shadow: 0 0 8px rgba(251,191,36,0.5), inset 0 2px 4px rgba(0,0,0,0.3);
+}
+#btn-oracle {
+  font-size: 12px;
+  padding: 6px 16px;
+  border-radius: var(--radius);
+  border: 1px solid #fbbf24;
+  background: rgba(251,191,36,0.15);
+  color: #fbbf24;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+#btn-oracle:hover {
+  background: rgba(251,191,36,0.3);
+  box-shadow: 0 0 10px rgba(251,191,36,0.5);
+}
+#btn-oracle:active {
+  transform: translateY(1px);
+}
+
+
 #top-bar .controls {
   display: flex;
   gap: 8px;
@@ -91,14 +175,93 @@ button {
 button:hover:not(:disabled) { background: var(--bg-3); border-color: var(--accent-blue); }
 button:disabled { opacity: 0.35; cursor: default; }
 
-.speed-label {
+/* ── Speed Buttons (Divine Time) ────────────────────────────── */
+.speed-buttons {
+  display: flex;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.speed-btn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 0;
+  background: var(--bg-2);
+  color: var(--text-2);
+  cursor: pointer;
+  transition: all 0.12s;
+  min-width: 32px;
+}
+.speed-btn:hover { background: var(--bg-3); color: var(--text-0); }
+.speed-btn.active {
+  background: rgba(68,136,255,0.2);
+  color: var(--accent-blue);
+  box-shadow: inset 0 -2px 0 var(--accent-blue);
+}
+
+/* ── Fast-Forward Buttons ──────────────────────────────────── */
+.ff-buttons {
+  display: flex;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.ff-btn {
+  font-size: 11px;
+  padding: 4px 7px;
+  border: none;
+  border-radius: 0;
+  background: var(--bg-2);
+  color: var(--text-2);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.ff-btn:hover { background: rgba(251,191,36,0.15); color: #fbbf24; }
+
+/* ── Auto-Pause Toggle ─────────────────────────────────────── */
+.auto-toggle {
   display: flex;
   align-items: center;
-  gap: 6px;
-  color: var(--text-2);
+  gap: 4px;
   font-size: 11px;
+  color: var(--text-2);
+  cursor: pointer;
 }
-#speed-slider { width: 80px; accent-color: var(--accent-blue); }
+.auto-toggle input[type="checkbox"] {
+  accent-color: var(--accent-blue);
+  width: 13px;
+  height: 13px;
+}
+
+/* ── Time Display ──────────────────────────────────────────── */
+.time-info {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent-yellow);
+  font-weight: 600;
+}
+
+/* ── Interruption Badge ────────────────────────────────────── */
+.interruption-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(251,191,36,0.15);
+  color: #fbbf24;
+  font-weight: 600;
+  animation: interruptFlash 0.6s ease-in-out 3;
+  transition: opacity 0.5s;
+}
+.interruption-badge:empty { display: none; }
+@keyframes interruptFlash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
 
 /* ── Main Grid ──────────────────────────────────────────────── */
 #main-grid {
@@ -153,6 +316,27 @@ h2 {
 .agent-card .alive { background: var(--accent-green); box-shadow: 0 0 6px var(--accent-green); }
 .agent-card .dead-dot { background: var(--accent-red); }
 
+.skill-badge {
+  display: inline-block;
+  font-size: 10px;
+  margin-left: 2px;
+  padding: 0 2px;
+  border-radius: 3px;
+  background: rgba(255,140,0,0.2);
+  cursor: help;
+}
+
+.social-badge {
+  display: inline-block;
+  font-size: 9px;
+  margin-left: 3px;
+  padding: 0 3px;
+  border-radius: 3px;
+  background: rgba(100,180,255,0.2);
+  color: var(--accent-blue);
+  cursor: help;
+}
+
 .need-bar-container { margin-top: 4px; }
 .need-bar-label {
   display: flex;
@@ -174,38 +358,31 @@ h2 {
 }
 .need-bar-fill.hunger { background: var(--accent-yellow); }
 .need-bar-fill.thirst { background: var(--accent-blue); }
+.need-bar-fill.exposure { background: #4ecdc4; } /* cyan-teal for temperature/exposure */
 .need-bar-fill.critical { background: var(--accent-red) !important; }
 
-/* ── Map Panel ──────────────────────────────────────────────── */
+/* Status badges (MVP-03-A) */
+.status-badge {
+  display: inline-block;
+  font-size: 10px;
+  margin-left: 2px;
+  padding: 0 2px;
+  border-radius: 3px;
+  cursor: help;
+}
+.status-badge.warming { background: rgba(255,140,0,0.25); }
+.status-badge.sheltered { background: rgba(78,205,196,0.25); }
+
+/* ── Map Panel (PixiJS Canvas) ──────────────────────────────── */
 #map-panel { display: flex; flex-direction: column; align-items: center; }
 
-#map-grid {
-  display: inline-grid;
-  gap: 1px;
-  background: var(--bg-0);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
+#pixi-container {
   margin-top: 6px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-.map-cell {
-  width: 22px;
-  height: 22px;
-  background: var(--bg-2);
-  position: relative;
-  transition: background 0.15s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-}
-.map-cell.has-agent { background: rgba(0,232,143,0.25); }
-.map-cell.has-agent-dead { background: rgba(255,68,102,0.2); }
-.map-cell.has-berry { background: rgba(136,204,68,0.2); }
-.map-cell.has-water { background: rgba(68,170,255,0.2); }
-.map-cell.selected-agent { outline: 2px solid var(--accent-blue); outline-offset: -1px; z-index: 1; }
-.map-cell .cell-icon { font-size: 12px; }
 
 /* ── Event Panel ────────────────────────────────────────────── */
 #event-filters {
@@ -252,6 +429,17 @@ h2 {
 .event-entry.ENTITY_DIED .event-type { color: var(--accent-red); font-weight: 700; }
 .event-entry.NEED_DECAYED .event-type { color: var(--text-2); }
 .event-entry.TIME_TICKED .event-type { color: var(--text-2); }
+.event-entry.STRUCTURE_BUILT .event-type { color: #ff8c00; font-weight: 600; }
+.event-entry.STRUCTURE_EXPIRED .event-type { color: #666; }
+.event-entry.WARMING_APPLIED .event-type { color: #ff6b4a; }
+.event-entry.SKILL_LEARNED .event-type { color: #4af; font-weight: 600; }
+.event-entry.SKILL_OBSERVED .event-type { color: #888; }
+.event-entry.TECHNOLOGY_UNLOCKED .event-type { color: var(--accent-purple); font-weight: 700; }
+.event-entry.TRIBE_GATHER_POINT_UPDATED .event-type { color: #ffd700; }
+.event-entry.SOCIAL_MEMORY_UPDATED .event-type { color: #6bb; }
+.event-entry.ENVIRONMENT_CHANGED .event-type { color: #aad4f5; font-style: italic; }
+.event-entry.EXPOSURE_WARNING .event-type { color: #4ecdc4; font-weight: 700; }
+.event-entry.SHELTERED_APPLIED .event-type { color: #6de8e0; }
 
 /* ── Bottom Bar ─────────────────────────────────────────────── */
 #bottom-bar {
@@ -280,6 +468,221 @@ h2 {
   color: var(--text-2);
 }
 #metrics-panel span { white-space: nowrap; }
+
+/* ── Knowledge Badge (MVP-03-B) ────────────────────────────── */
+.knowledge-badge {
+  font-size: 10px;
+  color: #c084fc;
+  margin-left: 2px;
+}
+
+/* ── Lifecycle Badges (MVP-04) ──────────────────────────────── */
+.life-badge {
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  margin-left: 2px;
+}
+.life-badge.child { color: #67e8f9; background: rgba(103,232,249,0.15); }
+.life-badge.adult { color: #a3e635; }
+.life-badge.elder { color: #9ca3af; background: rgba(156,163,175,0.15); }
+.spouse-badge { font-size: 10px; margin-left: 2px; }
+.prayer-badge { font-size: 10px; margin-left: 2px; color: #fbbf24; animation: prayer-glow 1.5s ease-in-out infinite; }
+@keyframes prayer-glow { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
+
+/* ── Panel Tabs (MVP-06A) ──────────────────────────────────── */
+.panel-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 0 4px;
+}
+.panel-tab {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.panel-tab:hover { color: var(--text-0); }
+.panel-tab.active {
+  color: var(--accent-blue);
+  border-bottom-color: var(--accent-blue);
+}
+.tab-content { display: none; overflow-y: auto; flex: 1; }
+.tab-content.active { display: block; }
+
+/* ── Chronicle Panel (MVP-06A) ──────────────────────────────── */
+#chronicle-log {
+  padding: 6px 8px;
+}
+.chronicle-entry {
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  border-radius: var(--radius);
+  border-left: 3px solid var(--border);
+  background: var(--bg-2);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.chronicle-entry:hover {
+  background: var(--bg-3);
+  border-left-color: var(--accent-blue);
+}
+.chronicle-entry.legendary { border-left-color: #fbbf24; }
+.chronicle-entry.major { border-left-color: #a78bfa; }
+.chronicle-entry.minor { border-left-color: var(--text-2); }
+
+.chronicle-time {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-2);
+  margin-bottom: 2px;
+}
+.chronicle-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-0);
+  margin-bottom: 3px;
+}
+.chronicle-body {
+  font-size: 11px;
+  color: var(--text-1);
+  line-height: 1.4;
+  font-style: italic;
+}
+.chronicle-tags {
+  margin-top: 4px;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.chronicle-tag {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 8px;
+  background: rgba(68,136,255,0.1);
+  color: var(--accent-blue);
+}
+
+/* ── Narrative Toast (MVP-06A) ──────────────────────────────── */
+.narrative-toast {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 420px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  background: rgba(11,13,19,0.92);
+  border: 1px solid rgba(251,191,36,0.3);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 15px rgba(251,191,36,0.1);
+  z-index: 100;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.narrative-toast.hidden {
+  opacity: 0;
+  transform: translateX(-50%) translateY(10px);
+  pointer-events: none;
+}
+.narrative-toast .toast-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fbbf24;
+  margin-bottom: 4px;
+}
+.narrative-toast .toast-body {
+  font-size: 11px;
+  color: var(--text-1);
+  line-height: 1.5;
+  font-style: italic;
+}
+.narrative-toast .toast-meta {
+  font-size: 9px;
+  color: var(--text-2);
+  margin-top: 4px;
+}
+
+/* ── Agent Life Events (MVP-06A) ────────────────────────────── */
+.life-events-section {
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+.life-event-item {
+  font-size: 10px;
+  color: var(--text-1);
+  padding: 2px 0;
+  display: flex;
+  gap: 6px;
+}
+.life-event-year {
+  font-family: var(--font-mono);
+  color: var(--text-2);
+  min-width: 36px;
+}
+.life-event-desc { color: var(--text-1); }
+
+/* ── Epoch Summary (MVP-06B) ────────────────────────────── */
+.chronicle-actions {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+}
+#btn-inscribe-era {
+  background: var(--bg-1);
+  color: #fbbf24;
+  border: 1px solid rgba(251,191,36,0.3);
+  font-family: var(--font-serif);
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: var(--radius);
+  padding: 4px 12px;
+  transition: all 0.2s;
+}
+#btn-inscribe-era:hover {
+  background: rgba(251,191,36,0.1);
+  box-shadow: 0 0 8px rgba(251,191,36,0.3);
+}
+#btn-inscribe-era:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.epoch-summary-card {
+  margin: 16px 12px;
+  padding: 16px;
+  background: linear-gradient(180deg, rgba(251,191,36,0.05) 0%, rgba(20,20,25,0.95) 100%);
+  border: 1px solid rgba(251,191,36,0.2);
+  border-left: 3px solid #fbbf24;
+  border-radius: var(--radius);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  animation: slideFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.epoch-summary-title {
+  font-family: var(--font-serif);
+  font-size: 16px;
+  color: #fbbf24;
+  font-weight: bold;
+  margin-bottom: 8px;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+}
+.epoch-summary-body {
+  font-family: var(--font-serif);
+  font-size: 13px;
+  line-height: 1.6;
+  color: #e2e8f0;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+/* ── Map panel needs position:relative for toast overlay ──── */
+#map-panel { position: relative; }
 
 /* ── Scrollbar ──────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; }
