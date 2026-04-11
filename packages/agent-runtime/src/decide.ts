@@ -152,14 +152,17 @@ function shouldConsumePlanStep(
 
 // ── Crisis Detection ──────────────────────────────────────────
 
+/** Crisis threshold: needs below this force plan abandonment. */
+const CRISIS_NEED_THRESHOLD = 20;
+/** Critical HP threshold: always abandon plan. */
+const CRISIS_HP_THRESHOLD = 25;
+
 /**
  * Check if the agent is in a crisis state that should override the LLM plan.
  * Returns true if the plan should be abandoned.
  *
- * Softer thresholds than before:
- * - HP ≤ 10: always abandon (near death)
- * - Hunger ≤ 10: abandon non-survival actions (but allow move/gather/eat)
- * - Thirst ≤ 10: abandon non-survival actions (but allow move/gather/drink)
+ * P0 FIX: Raised thresholds from 10→20/25 so agents break from
+ * non-survival LLM plans earlier when needs are critical.
  */
 function shouldAbandonPlanForCrisis(
   entity: EntityState,
@@ -170,17 +173,17 @@ function shouldAbandonPlanForCrisis(
   const thirst = entity.needs.thirst ?? 100;
 
   // Near death: always abandon
-  if (hp <= 10) return true;
+  if (hp <= CRISIS_HP_THRESHOLD) return true;
 
   // Survival action types that should still be allowed during crisis
   const survivalTypes = new Set(["eat", "drink", "gather", "move", "harvest"]);
   const isSurvivalAction = survivalTypes.has(step.type);
 
   // Severe starvation: allow only survival actions
-  if (hunger <= 10 && !isSurvivalAction) return true;
+  if (hunger <= CRISIS_NEED_THRESHOLD && !isSurvivalAction) return true;
 
   // Severe dehydration: allow only survival actions
-  if (thirst <= 10 && !isSurvivalAction) return true;
+  if (thirst <= CRISIS_NEED_THRESHOLD && !isSurvivalAction) return true;
 
   return false;
 }
@@ -289,6 +292,9 @@ export function decideActionV3(
   // Always update emotions (cheap, rule-based)
   updateEmotion(entity);
 
+  // ── P0: Clear plan if previous actions were repeatedly rejected ──
+  checkPendingPlanClear(entity);
+
   // Try cognitive loop if adapter is available
   if (_adapter?.isEnabled()) {
     // ── Execute existing plan ────────────────────────────────
@@ -324,9 +330,15 @@ export function decideActionV3(
 /** Per-entity action history for LLM feedback. */
 const _recentEntityActions = new Map<string, { action: string; result: string }[]>();
 
+/** Per-entity consecutive rejection counter. */
+const _consecutiveRejects = new Map<string, number>();
+
 /**
  * Record an action outcome for an entity. Called by tick.ts after validation.
  * This feeds back into the next LLM cognitive call so it knows what happened.
+ *
+ * P0 FIX: On rejection, clears the entity's plan to prevent dead loops
+ * (e.g. gather→rejected→gather→rejected forever on depleted resources).
  */
 export function recordActionResult(
   entityId: string,
@@ -341,4 +353,42 @@ export function recordActionResult(
   history.push({ action, result });
   // Keep only last 5 actions
   if (history.length > 5) history.shift();
+
+  // ── P0: Clear plan on rejection to break dead loops ──────
+  if (result.startsWith("rejected")) {
+    const rejectCount = (_consecutiveRejects.get(entityId) ?? 0) + 1;
+    _consecutiveRejects.set(entityId, rejectCount);
+
+    // After 2 consecutive rejections, nuke the plan
+    if (rejectCount >= 2) {
+      // Access entity via the _entityRegistry if available
+      _pendingPlanClears.add(entityId);
+    }
+  } else {
+    _consecutiveRejects.delete(entityId);
+  }
+}
+
+/**
+ * Set of entity IDs whose plans should be cleared on the next decision cycle.
+ * Populated by recordActionResult when consecutive rejections occur.
+ */
+const _pendingPlanClears = new Set<string>();
+
+/**
+ * Check and clear pending plan invalidations. Called at the start of decideActionV3.
+ */
+function checkPendingPlanClear(entity: EntityState): boolean {
+  if (_pendingPlanClears.has(entity.id)) {
+    _pendingPlanClears.delete(entity.id);
+    _consecutiveRejects.delete(entity.id);
+    if (entity.actionPlan && entity.actionPlan.length > 0) {
+      console.log(
+        `[Cognitive] ⚠️ ${entity.name ?? entity.id}: plan cleared (repeated rejection)`
+      );
+      entity.actionPlan = [];
+    }
+    return true;
+  }
+  return false;
 }

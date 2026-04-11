@@ -26,7 +26,7 @@ export interface AgentSnapshot {
   /** This entity's own skills (convenience accessor). */
   selfSkills: Record<string, number>;
   /** All nearby alive entities (MVP-02-E social perception). */
-  nearbyEntities: { entityId: string; tribeId: string; position: Vec2 }[];
+  nearbyEntities: { entityId: string; tribeId: string; position: Vec2; needs?: { hunger: number; thirst: number; hp: number } }[];
   /** This entity's tribe's gather point, if available (MVP-02-E). */
   tribeGatherPoint?: Vec2;
   /** Resource positions shared by nearby tribe members' episodic memory (MVP-02-E). */
@@ -138,6 +138,7 @@ export function perceive(
       entityId: other.id,
       tribeId: other.tribeId,
       position: { ...other.position },
+      needs: { hunger: other.needs.hunger ?? 100, thirst: other.needs.thirst ?? 100, hp: other.needs.hp ?? 100 },
     });
     if (other.skills && Object.keys(other.skills).length > 0) {
       nearbySkilled.push({

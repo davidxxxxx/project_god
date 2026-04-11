@@ -522,6 +522,22 @@ export function memoryAwarePolicy(
     }
   }
 
+  // ── Priority 4d: P2 — EMERGENCY FOOD SHARING ─────────────────
+  // If a nearby agent (same tile or adjacent) is starving and we have surplus food, gift it.
+  if (!isChild) {
+    const shareAction = tryShareFood(self, actorId, snapshot);
+    if (shareAction) return shareAction;
+  }
+
+  // ── Priority 4e: P1 — SURVIVAL EXPLORATION ───────────────────
+  // If we couldn't find ANY food/water through vision, memory, shared, or cultural knowledge,
+  // actively move toward unexplored tiles rather than sitting idle until death.
+  const isHungryOrThirsty = hungerPressure > 30 || thirstPressure > 30;
+  if (isHungryOrThirsty && !isChild) {
+    const exploreAction = exploreSurvival(self, actorId, snapshot, primaryNeed);
+    if (exploreAction) return exploreAction;
+  }
+
   // ── Priority 4.5: Social behavior (MVP-02-E) ──────────────
   // Phase 1: E types drift toward group more (lower threshold = seeks group from farther)
   // I types tolerate being far from group (higher threshold = only returns when very far)
@@ -1006,4 +1022,128 @@ function findNearestOfType(
  */
 function stepToward(from: Vec2, to: Vec2): Vec2 {
   return stepTowardRaw(from, to, _worldTiles, _terrainDefs);
+}
+
+// ── P1: Survival Exploration ──────────────────────────────────
+
+/**
+ * When all resource search (visible, episodic, semantic, shared, cultural) fails,
+ * move toward the nearest unexplored tile to discover new resources.
+ *
+ * Strategy:
+ * 1. If we have a camp, fan out in the opposite direction (explore outward)
+ * 2. Otherwise, move toward the nearest tile NOT in episodic memory
+ * 3. Prefer directions with unvisited tiles
+ */
+function exploreSurvival(
+  self: EntityState,
+  actorId: EntityId,
+  snapshot: AgentSnapshot,
+  primaryNeed: string,
+): ActionIntent | null {
+  const visited = new Set(
+    (self.episodicMemory ?? []).map((e) => `${e.position.x},${e.position.y}`)
+  );
+
+  // Search in expanding rings for unexplored passable tiles
+  const maxRange = 8;
+  let bestTarget: Vec2 | null = null;
+  let bestDist = Infinity;
+
+  for (let ring = 2; ring <= maxRange; ring++) {
+    for (let dy = -ring; dy <= ring; dy++) {
+      for (let dx = -ring; dx <= ring; dx++) {
+        if (Math.abs(dx) !== ring && Math.abs(dy) !== ring) continue; // Only ring edges
+        const tx = self.position.x + dx;
+        const ty = self.position.y + dy;
+        const key = `${tx},${ty}`;
+
+        // Check passability
+        const tile = snapshot.worldTiles?.[key];
+        if (!tile) continue;
+        const tDef = snapshot.terrainDefs?.[tile.terrain];
+        if (!tDef?.passable) continue;
+
+        // Prefer unvisited tiles
+        if (visited.has(key)) continue;
+
+        const dist = manhattan(self.position, { x: tx, y: ty });
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestTarget = { x: tx, y: ty };
+        }
+      }
+    }
+    if (bestTarget) break; // Found something at this ring, go for it
+  }
+
+  if (bestTarget) {
+    const target: Vec2 = bestTarget!;
+    const step = stepToward(self.position, target);
+    return {
+      actorId, type: "move",
+      position: step,
+      reason: `[survival-explore] seeking ${primaryNeed} — moving to unexplored (${target.x},${target.y})`,
+    };
+  }
+
+  return null;
+}
+
+// ── P2: Emergency Food Sharing ──────────────────────────────
+
+/** Hunger threshold below which an agent is considered starving and eligible for gifts. */
+const SHARE_STARVING_THRESHOLD = 15;
+/** Minimum food surplus the sharer must have after giving. */
+const SHARE_MIN_SURPLUS = 2;
+
+/**
+ * Check if any adjacent tribe member is starving and we have surplus food.
+ * If so, return a gift action.
+ *
+ * Only triggers when:
+ * - Sharer has >= SHARE_MIN_SURPLUS food (won't starve ourselves)
+ * - Recipient's hunger <= SHARE_STARVING_THRESHOLD (actually desperate)
+ * - Same tribe
+ */
+function tryShareFood(
+  self: EntityState,
+  actorId: EntityId,
+  snapshot: AgentSnapshot,
+): ActionIntent | null {
+  const myFood = foodCount(self.inventory);
+  if (myFood < SHARE_MIN_SURPLUS) return null;
+
+  // Only share if we ourselves are not starving
+  const myHunger = self.needs.hunger ?? 100;
+  if (myHunger <= 30) return null;
+
+  // Find starving adjacent tribe members
+  for (const ne of snapshot.nearbyEntities) {
+    if (ne.tribeId !== self.tribeId) continue;
+    const dist = manhattan(self.position, ne.position);
+    if (dist > 1) continue; // Must be adjacent
+
+    // Check if they're starving (needs info from perception)
+    // We can check their visible needs since they're adjacent
+    const needsHunger = ne.needs?.hunger ?? 100;
+    if (needsHunger > SHARE_STARVING_THRESHOLD) continue;
+
+    // Gift the food that gives most nutrition
+    const foodItem = (self.inventory["roast_berry"] ?? 0) > 0 ? "roast_berry"
+      : (self.inventory["dry_berry"] ?? 0) > 0 ? "dry_berry"
+      : (self.inventory["berry"] ?? 0) > 0 ? "berry"
+      : null;
+
+    if (foodItem) {
+      return {
+        actorId, type: "gift",
+        targetId: ne.entityId as ResourceNodeId,
+        itemId: foodItem,
+        reason: `[share] giving ${foodItem} to starving ${ne.entityId} (hunger=${needsHunger})`,
+      };
+    }
+  }
+
+  return null;
 }

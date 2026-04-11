@@ -2,16 +2,18 @@
   "hunger": {
     "max": 100,
     "initial": 80,
-    "decayPerTick": 1,
+    "decayPerTick": 0.6,
     "deathThreshold": 0,
-    "criticalThreshold": 25
+    "criticalThreshold": 25,
+    "_note": "Reduced from 1.0 → 0.6. Agent now has ~133 ticks before starving (was 80)."
   },
   "thirst": {
     "max": 100,
     "initial": 80,
-    "decayPerTick": 1.5,
+    "decayPerTick": 0.9,
     "deathThreshold": 0,
-    "criticalThreshold": 25
+    "criticalThreshold": 25,
+    "_note": "Reduced from 1.5 → 0.9. Agent now has ~89 ticks before dehydrating (was 53)."
   },
   "fatigue": {
     "max": 100,
