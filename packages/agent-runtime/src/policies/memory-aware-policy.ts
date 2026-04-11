@@ -136,8 +136,13 @@ export function memoryAwarePolicy(
   const hasWood = (self.inventory["wood"] ?? 0) > 0;
 
   // ── Priority 0: Child follows parent (MVP-04) ──────────────
+  // Young children (age < 10) always follow parents.
+  // Adolescents (age 10-14) skip this and use full decision tree + LLM plans.
   const isChild = self.statuses?.includes("child") ?? false;
-  if (isChild && self.parentIds && self.parentIds.length > 0) {
+  const ADOLESCENT_AGE = 10;
+  const isYoungChild = isChild && (self.age ?? 0) < ADOLESCENT_AGE;
+
+  if (isYoungChild && self.parentIds && self.parentIds.length > 0) {
     const parentId = self.parentIds.find((pid) => {
       return snapshot.nearbyEntities.find((e) => e.entityId === pid) !== undefined;
     });

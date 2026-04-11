@@ -85,8 +85,11 @@ export class CognitiveAdapter {
   ): boolean {
     if (!this.isEnabled()) return false;
     if (!entity.alive) return false;
-    // Children don't get cognitive cycles (yet)
-    if (entity.statuses?.includes("child")) return false;
+    // Young children (age < 10) don't get cognitive cycles — they just follow parents.
+    // Adolescents (age 10-14) DO get LLM cognition: they start having thoughts,
+    // plans, and personality before reaching full adulthood at 15.
+    const ADOLESCENT_AGE = 10;
+    if (entity.statuses?.includes("child") && (entity.age ?? 0) < ADOLESCENT_AGE) return false;
 
     const lastCog = entity.lastCognitiveTick ?? 0;
     const elapsed = currentTick - lastCog;
@@ -239,11 +242,17 @@ export class CognitiveAdapter {
       `Tried: ${a.action} → ${a.result}`
     ).join("\n  ") || "no actions yet";
 
+    // Life stage context for adolescents
+    const isAdolescent = entity.statuses?.includes("child") && (entity.age ?? 0) >= 10;
+    const lifeStage = isAdolescent
+      ? `\nYou are an adolescent (age ${age}). You are curious and eager to learn. You stay near your tribe but are starting to help gather food, observe skills, and form your own opinions. You look up to adults and want to prove yourself.`
+      : "";
+
     return `You are ${name}, a ${age}-year-old ${sex} person in the Stone Age.
 
 Your personality: ${mbti} — ${traitDesc}
 Your current emotion: ${emotion}
-Your current goal: ${goal}
+Your current goal: ${goal}${lifeStage}
 
 == Your Body ==
 HP: ${hp}/100  Hunger: ${hunger}/100  Thirst: ${thirst}/100
