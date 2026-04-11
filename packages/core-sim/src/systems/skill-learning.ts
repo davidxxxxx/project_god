@@ -148,11 +148,18 @@ export function tickSkillLearning(
         // Skip if already unlocked
         if (tribe.technologies.includes(techId)) continue;
 
+        // Phase 3: check prerequisites are met
+        const prereqs = techDef.prerequisites ?? [];
+        if (prereqs.length > 0 && !prereqs.every((p) => tribe.technologies.includes(p))) continue;
+
         // Count tribe members with the required skill
-        const skilledCount = tribe.memberIds.filter((memberId) => {
-          const entity = world.entities[memberId];
-          return entity?.alive && (entity.skills?.[techDef.requiredSkill] ?? 0) > 0;
-        }).length;
+        // If requiredSkill is null, check minTribePopulation instead
+        const skilledCount = techDef.requiredSkill
+          ? tribe.memberIds.filter((memberId) => {
+              const entity = world.entities[memberId];
+              return entity?.alive && (entity.skills?.[techDef.requiredSkill!] ?? 0) > 0;
+            }).length
+          : tribe.memberIds.filter((memberId) => world.entities[memberId]?.alive).length;
 
         if (skilledCount >= techDef.minSkilledMembers) {
           tribe.technologies.push(techId);

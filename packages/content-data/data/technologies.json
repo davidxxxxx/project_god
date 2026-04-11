@@ -1,16 +1,149 @@
 {
+  "_doc": "Technology tree. prerequisites = other tech IDs that must be unlocked first.",
+
   "controlled_fire": {
     "displayName": "Controlled Fire",
     "description": "The tribe-level knowledge of fire creation and usage",
     "requiredSkill": "fire_making",
     "minSkilledMembers": 2,
-    "unlocksStructures": ["fire_pit"]
+    "prerequisites": [],
+    "unlocksStructures": ["fire_pit"],
+    "unlocksRecipes": ["roast_berry", "boiled_water"],
+    "unlocksActions": []
+  },
+  "stone_tools": {
+    "displayName": "Stone Tools",
+    "description": "Shaping stone into useful cutting and scraping tools",
+    "requiredSkill": "tool_making",
+    "minSkilledMembers": 1,
+    "prerequisites": [],
+    "unlocksStructures": [],
+    "unlocksRecipes": ["stone_knife"],
+    "unlocksActions": ["craft"]
   },
   "basic_spirituality": {
     "displayName": "Basic Spirituality",
-    "description": "The tribe's shared understanding of the divine, allowing them to construct an altar.",
+    "description": "The tribe's shared understanding of the divine",
     "requiredSkill": "spiritual_awareness",
     "minSkilledMembers": 1,
-    "unlocksStructures": ["shrine"]
+    "prerequisites": [],
+    "unlocksStructures": ["shrine"],
+    "unlocksRecipes": [],
+    "unlocksActions": []
+  },
+  "language": {
+    "displayName": "Language",
+    "description": "Shared spoken language enabling complex communication",
+    "requiredSkill": null,
+    "minSkilledMembers": 0,
+    "minTribePopulation": 5,
+    "prerequisites": [],
+    "unlocksStructures": [],
+    "unlocksRecipes": [],
+    "unlocksActions": ["talk", "teach"]
+  },
+
+  "pottery": {
+    "displayName": "Pottery",
+    "description": "Shaping clay into vessels for storage and cooking",
+    "requiredSkill": "cooking",
+    "minSkilledMembers": 2,
+    "prerequisites": ["controlled_fire"],
+    "unlocksStructures": ["smoker"],
+    "unlocksRecipes": ["clay_pot"],
+    "unlocksActions": []
+  },
+  "food_preservation": {
+    "displayName": "Food Preservation",
+    "description": "Smoking, drying, and storing food to prevent spoilage",
+    "requiredSkill": "cooking",
+    "minSkilledMembers": 2,
+    "prerequisites": ["pottery"],
+    "unlocksStructures": ["granary"],
+    "unlocksRecipes": ["smoked_meat", "dried_berry"],
+    "unlocksActions": []
+  },
+
+  "shelter_building_tech": {
+    "displayName": "Shelter Building",
+    "description": "Advanced techniques for building durable permanent shelters",
+    "requiredSkill": "shelter_building",
+    "minSkilledMembers": 2,
+    "prerequisites": [],
+    "unlocksStructures": ["hut"],
+    "unlocksRecipes": [],
+    "unlocksActions": []
+  },
+  "masonry": {
+    "displayName": "Masonry",
+    "description": "Working with stone to create stronger, larger structures",
+    "requiredSkill": "masonry_skill",
+    "minSkilledMembers": 2,
+    "prerequisites": ["shelter_building_tech", "stone_tools"],
+    "unlocksStructures": ["longhouse", "village_wall", "watchtower"],
+    "unlocksRecipes": [],
+    "unlocksActions": []
+  },
+
+  "planting_tech": {
+    "displayName": "Planting",
+    "description": "Deliberate cultivation of wild plants",
+    "requiredSkill": "planting",
+    "minSkilledMembers": 1,
+    "prerequisites": [],
+    "unlocksStructures": [],
+    "unlocksRecipes": [],
+    "unlocksActions": ["plant"]
+  },
+  "agriculture": {
+    "displayName": "Agriculture",
+    "description": "Systematic farming with irrigation and crop rotation",
+    "requiredSkill": "planting",
+    "minSkilledMembers": 3,
+    "prerequisites": ["planting_tech"],
+    "unlocksStructures": [],
+    "unlocksRecipes": [],
+    "unlocksActions": []
+  },
+  "irrigation": {
+    "displayName": "Irrigation",
+    "description": "Channeling water to fields and settlements",
+    "requiredSkill": "planting",
+    "minSkilledMembers": 2,
+    "prerequisites": ["masonry", "agriculture"],
+    "unlocksStructures": ["well"],
+    "unlocksRecipes": [],
+    "unlocksActions": []
+  },
+
+  "organized_religion": {
+    "displayName": "Organized Religion",
+    "description": "Formalized worship with dedicated structures and clergy",
+    "requiredSkill": "spiritual_awareness",
+    "minSkilledMembers": 2,
+    "prerequisites": ["basic_spirituality", "language"],
+    "unlocksStructures": ["temple"],
+    "unlocksRecipes": [],
+    "unlocksActions": []
+  },
+  "writing": {
+    "displayName": "Writing",
+    "description": "Recording knowledge in lasting physical form",
+    "requiredSkill": null,
+    "minSkilledMembers": 0,
+    "prerequisites": ["language"],
+    "unlocksStructures": ["school", "library"],
+    "unlocksRecipes": [],
+    "unlocksActions": []
+  },
+  "water_crossing": {
+    "displayName": "Water Crossing",
+    "description": "Knowledge of fording rivers at shallow points",
+    "requiredSkill": null,
+    "minSkilledMembers": 0,
+    "prerequisites": [],
+    "unlocksStructures": [],
+    "unlocksRecipes": [],
+    "unlocksActions": ["wade"]
   }
 }

@@ -42,6 +42,15 @@ export function decayNeeds(
       entity.needs.hp = DEFAULT_HP;
     }
 
+    // MVP-03: Clear expired wet status
+    if (entity.statuses?.includes("wet")) {
+      const wetUntil = entity.attributes?.["wet_until"] ?? 0;
+      if (world.tick >= wetUntil) {
+        entity.statuses = entity.statuses.filter((s) => s !== "wet");
+        delete entity.attributes["wet_until"];
+      }
+    }
+
     for (const [needKey, def] of Object.entries(needsDefs)) {
       // ── Special handling: exposure (MVP-03-A) ─────────────
       if (needKey === "exposure") {
@@ -58,7 +67,10 @@ export function decayNeeds(
           newValue = Math.min(def.max, oldValue + EXPOSURE_REGEN * 0.5);
         } else if (isCold) {
           // Cold and unprotected
-          const decay = hasWarming ? EXPOSURE_WARMING_DECAY : EXPOSURE_COLD_DECAY;
+          let decay = hasWarming ? EXPOSURE_WARMING_DECAY : EXPOSURE_COLD_DECAY;
+          // MVP-03: Being wet increases cold exposure decay by 50%
+          const isWet = entity.statuses?.includes("wet") ?? false;
+          if (isWet) decay *= 1.5;
           newValue = Math.max(0, oldValue - decay);
         } else {
           // Warm enough: slowly recover

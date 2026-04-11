@@ -8,6 +8,7 @@
     "effectRadius": 2,
     "effects": ["warming"],
     "decayPerTick": 0,
+    "requiresTech": "controlled_fire",
     "description": "Warmth and cooking center. Requires wood fuel to stay lit."
   },
   "lean_to": {
@@ -30,8 +31,9 @@
     "effectRadius": 2,
     "effects": ["sheltered", "home"],
     "decayPerTick": 0.05,
-    "description": "Permanent family dwelling. Provides shelter and accelerated HP recovery.",
-    "requiresSkill": "shelter_building"
+    "requiresSkill": "shelter_building",
+    "requiresTech": "shelter_building_tech",
+    "description": "Permanent family dwelling. Provides shelter and accelerated HP recovery."
   },
   "shrine": {
     "displayName": "Tribal Shrine",
@@ -43,6 +45,120 @@
     "effects": ["spiritual_focus"],
     "decayPerTick": 0,
     "isSpiritualCenter": true,
+    "requiresTech": "basic_spirituality",
     "description": "Sacred structure for rituals and spiritual gatherings."
+  },
+
+  "longhouse": {
+    "displayName": "Longhouse",
+    "requiredItems": { "wood": 10, "stone": 4, "grass": 6 },
+    "buildRange": 0,
+    "initialDurability": 800,
+    "fuelPerTick": 0,
+    "effectRadius": 3,
+    "effects": ["sheltered", "home", "communal"],
+    "decayPerTick": 0.03,
+    "requiresSkill": "masonry_skill",
+    "requiresTech": "masonry",
+    "description": "Large communal dwelling. Houses multiple families and strengthens social bonds."
+  },
+  "village_wall": {
+    "displayName": "Village Wall",
+    "requiredItems": { "stone": 8, "wood": 4 },
+    "buildRange": 0,
+    "initialDurability": 1500,
+    "fuelPerTick": 0,
+    "effectRadius": 4,
+    "effects": ["defense"],
+    "decayPerTick": 0.01,
+    "requiresSkill": "masonry_skill",
+    "requiresTech": "masonry",
+    "description": "Stone and timber defensive perimeter. Protects the settlement."
+  },
+  "smoker": {
+    "displayName": "Smoking Rack",
+    "requiredItems": { "wood": 4, "stone": 2 },
+    "buildRange": 0,
+    "initialDurability": 200,
+    "fuelPerTick": 0.5,
+    "effectRadius": 1,
+    "effects": ["food_preservation"],
+    "decayPerTick": 0.1,
+    "requiresTech": "pottery",
+    "description": "Rack for smoking and drying food. Extends food shelf life."
+  },
+  "granary": {
+    "displayName": "Granary",
+    "requiredItems": { "wood": 6, "stone": 4 },
+    "buildRange": 0,
+    "initialDurability": 600,
+    "fuelPerTick": 0,
+    "effectRadius": 2,
+    "effects": ["storage_boost"],
+    "decayPerTick": 0.02,
+    "requiresTech": "food_preservation",
+    "description": "Stored food lasts longer. Doubles inventory capacity for nearby agents."
+  },
+  "well": {
+    "displayName": "Well",
+    "requiredItems": { "stone": 6, "wood": 2 },
+    "buildRange": 0,
+    "initialDurability": 2000,
+    "fuelPerTick": 0,
+    "effectRadius": 3,
+    "effects": ["water_source"],
+    "decayPerTick": 0,
+    "requiresTech": "irrigation",
+    "description": "Reliable water source. Provides unlimited drinking water."
+  },
+  "watchtower": {
+    "displayName": "Watchtower",
+    "requiredItems": { "wood": 8, "stone": 4 },
+    "buildRange": 0,
+    "initialDurability": 400,
+    "fuelPerTick": 0,
+    "effectRadius": 5,
+    "effects": ["vision_boost"],
+    "decayPerTick": 0.05,
+    "requiresSkill": "masonry_skill",
+    "requiresTech": "masonry",
+    "description": "Elevated platform for scouting. Extends perception range."
+  },
+  "temple": {
+    "displayName": "Temple",
+    "requiredItems": { "stone": 8, "wood": 4, "grass": 2 },
+    "buildRange": 0,
+    "initialDurability": 2000,
+    "fuelPerTick": 0,
+    "effectRadius": 5,
+    "effects": ["spiritual_focus", "faith_boost"],
+    "decayPerTick": 0,
+    "isSpiritualCenter": true,
+    "requiresTech": "organized_religion",
+    "description": "Grand place of worship. Greatly amplifies faith and prayer effectiveness."
+  },
+  "school": {
+    "displayName": "School",
+    "requiredItems": { "wood": 6, "stone": 2 },
+    "buildRange": 0,
+    "initialDurability": 400,
+    "fuelPerTick": 0,
+    "effectRadius": 3,
+    "effects": ["learning_boost"],
+    "decayPerTick": 0.03,
+    "requiresTech": "writing",
+    "description": "Accelerates skill learning for nearby agents."
+  },
+  "library": {
+    "displayName": "Library",
+    "requiredItems": { "wood": 8, "stone": 4 },
+    "buildRange": 0,
+    "initialDurability": 600,
+    "fuelPerTick": 0,
+    "effectRadius": 4,
+    "effects": ["knowledge_preservation"],
+    "decayPerTick": 0.02,
+    "requiresTech": "writing",
+    "description": "Preserves cultural memory permanently. Prevents knowledge decay."
   }
 }

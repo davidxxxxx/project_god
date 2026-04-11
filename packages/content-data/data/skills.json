@@ -38,5 +38,78 @@
     "learnTicks": 10,
     "initialProficiency": 0.5,
     "maxProficiency": 1.0
+  },
+
+  "tool_making": {
+    "displayName": "Tool Making",
+    "description": "Shaping stone and bone into useful tools",
+    "learnMethod": "observation",
+    "learnTicks": 8,
+    "initialProficiency": 0.3,
+    "maxProficiency": 1.0
+  },
+  "fishing": {
+    "displayName": "Fishing",
+    "description": "Catching fish from rivers and lakes",
+    "learnMethod": "discovery",
+    "learnTicks": 6,
+    "initialProficiency": 0.3,
+    "maxProficiency": 1.0
+  },
+  "masonry_skill": {
+    "displayName": "Masonry",
+    "description": "Working with stone for construction",
+    "learnMethod": "observation",
+    "learnTicks": 10,
+    "initialProficiency": 0.3,
+    "maxProficiency": 1.0
+  },
+  "teaching": {
+    "displayName": "Teaching",
+    "description": "Efficiently transferring knowledge to others",
+    "learnMethod": "practice",
+    "learnTicks": 15,
+    "initialProficiency": 0.2,
+    "maxProficiency": 1.0
+  },
+  "trading": {
+    "displayName": "Trading",
+    "description": "Fair exchange negotiation and value assessment",
+    "learnMethod": "practice",
+    "learnTicks": 10,
+    "initialProficiency": 0.3,
+    "maxProficiency": 1.0
+  },
+  "leadership": {
+    "displayName": "Leadership",
+    "description": "Inspiring and organizing groups effectively",
+    "learnMethod": "practice",
+    "learnTicks": 20,
+    "initialProficiency": 0.2,
+    "maxProficiency": 1.0
+  },
+  "scouting": {
+    "displayName": "Scouting",
+    "description": "Surveying terrain and identifying resources from distance",
+    "learnMethod": "discovery",
+    "learnTicks": 8,
+    "initialProficiency": 0.3,
+    "maxProficiency": 1.0
+  },
+  "hunting": {
+    "displayName": "Hunting",
+    "description": "Tracking and catching wild animals",
+    "learnMethod": "observation",
+    "learnTicks": 12,
+    "initialProficiency": 0.2,
+    "maxProficiency": 1.0
+  },
+  "pottery_skill": {
+    "displayName": "Pottery",
+    "description": "Shaping clay into vessels and containers",
+    "learnMethod": "observation",
+    "learnTicks": 8,
+    "initialProficiency": 0.3,
+    "maxProficiency": 1.0
   }
 }

@@ -30,10 +30,12 @@
 import {
   ActionIntent, EntityId, ResourceNodeId,
   EntityState, ResourceNodeState, StructureState, Vec2,
-  manhattan,
+  manhattan, getMBTICode,
 } from "@project-god/shared";
 import type { AgentSnapshot } from "../perception";
 import { setTask, clearTask, isTaskStale } from "../memory";
+import { computeModifiers, type PersonalityModifiers } from "../personality";
+import { stepToward as stepTowardRaw } from "../step-toward";
 
 export interface NeedConfig {
   max: number;
@@ -85,17 +87,15 @@ function mostNeededMaterial(inv: Record<string, number>, structure: string): str
   return bestMat;
 }
 
-// ── MVP-02Z: Food safety stock — configurable thresholds ─────
+// ── MVP-02Z: Food safety stock — now personality-driven ──────
+// Base values used when personality is undefined (backward compat).
+// Actual values come from computeModifiers(personality) at runtime.
 
 /**
- * Minimum food items before an agent considers non-survival activities.
- * Agent won't enter builder prep if food stock is below this.
+ * Family food safety bonus: added to base foodSafetyStock when agent has children.
+ * The base value itself comes from personality (J types stockpile more).
  */
-const FOOD_SAFETY_STOCK = 4;
-/** Higher safety stock when agent has children to feed. */
-const FAMILY_FOOD_SAFETY_STOCK = 6;
-/** Hunger level at which builder prep is immediately abandoned. */
-const BUILDER_HUNGER_ABORT = 35;
+const FAMILY_FOOD_SAFETY_BONUS = 2;
 
 // ── MVP-02Y: Module-level terrain context for stepToward ────
 // Set at the start of each memoryAwarePolicy call, read by stepToward.
@@ -116,6 +116,10 @@ export function memoryAwarePolicy(
 
   const { self, nearbyResources, memorizedResourcePositions, inventoryRemaining } = snapshot;
   const actorId = self.id;
+
+  // ── Phase 1: Compute personality modifiers ─────────────────
+  const pm = computeModifiers(self.personality);
+  const mbti = self.personality ? getMBTICode(self.personality) : "????";
 
   const hungerCfg = needsConfig["hunger"] ?? { max: 100, criticalThreshold: 25 };
   const thirstCfg = needsConfig["thirst"] ?? { max: 100, criticalThreshold: 25 };
@@ -251,9 +255,10 @@ export function memoryAwarePolicy(
   }
 
   // ── Priority 2.8: Prayer when in crisis (MVP-05) ──────────
+  // Phase 1: F types pray more readily (lower faith threshold, shorter cooldown)
   const faith = self.attributes?.faith ?? 0;
-  const MIN_PRAYER_FAITH = 8; // MVP-02Z: raised from 5→8, don't burn last faith
-  const PRAYER_COOLDOWN = 20;
+  const MIN_PRAYER_FAITH = Math.round(8 / pm.faithAffinity); // F types: lower bar
+  const PRAYER_COOLDOWN = Math.round(20 / pm.faithAffinity); // F types: pray more often
   const isCrisis = (self.needs.hunger ?? 100) <= (hungerCfg.criticalThreshold ?? 25)
     || (self.needs.thirst ?? 100) <= (thirstCfg.criticalThreshold ?? 25)
     || (snapshot.isCold && currentExposure <= (exposureCfg.criticalThreshold ?? 30));
@@ -266,7 +271,7 @@ export function memoryAwarePolicy(
     (self.lastPrayerTick === undefined || currentTick - self.lastPrayerTick >= PRAYER_COOLDOWN)
   ) {
     clearTask(self);
-    return { actorId, type: "pray", reason: `praying (faith:${faith}, crisis)` };
+    return { actorId, type: "pray", reason: `[${mbti}] praying (faith:${faith}, crisis, faithAff=${pm.faithAffinity.toFixed(1)})` };
   }
 
   // ── Priority 2.9: Shrine / Ritual (MVP-07A) ───────────────
@@ -379,7 +384,9 @@ export function memoryAwarePolicy(
   // NOTE: ADD_FUEL moved to Priority 2.7 (maintain-fire). No more 3.3.
 
   // ── Priority 3.5: Build structures ────────────────────────
-  if (buildTarget && hasMaterialsFor(self.inventory, buildTarget) && hungerPressure <= 60 && thirstPressure <= 60) {
+  // Phase 1: J types build sooner (buildPriorityBonus lowers effective threshold)
+  const buildHungerThreshold = 60 + pm.buildPriorityBonus;
+  if (buildTarget && hasMaterialsFor(self.inventory, buildTarget) && hungerPressure <= buildHungerThreshold && thirstPressure <= buildHungerThreshold) {
     clearTask(self);
     const hasSkill = buildTarget === "fire_pit"
       ? (snapshot.selfSkills["fire_making"] ?? 0) > 0
@@ -402,9 +409,10 @@ export function memoryAwarePolicy(
 
       const currentHunger = self.needs.hunger ?? 100;
       const hasChildren = (self.childIds ?? []).length > 0;
-      const safetyStock = hasChildren ? FAMILY_FOOD_SAFETY_STOCK : FOOD_SAFETY_STOCK;
+      // Phase 1: J types stockpile more food before building
+      const safetyStock = pm.foodSafetyStock + (hasChildren ? FAMILY_FOOD_SAFETY_BONUS : 0);
       const hasFoodSafety = foodCount(self.inventory) >= safetyStock;
-      const notStarving = currentHunger > BUILDER_HUNGER_ABORT;
+      const notStarving = currentHunger > pm.hungerAbortThreshold;
 
       if (
         hasAnyBuildSkill &&
@@ -515,7 +523,9 @@ export function memoryAwarePolicy(
   }
 
   // ── Priority 4.5: Social behavior (MVP-02-E) ──────────────
-  const GATHER_DISTANCE_THRESHOLD = 5;
+  // Phase 1: E types drift toward group more (lower threshold = seeks group from farther)
+  // I types tolerate being far from group (higher threshold = only returns when very far)
+  const GATHER_DISTANCE_THRESHOLD = Math.round(5 / pm.socialSeekWeight);
   if (snapshot.tribeGatherPoint) {
     const distToGather = manhattan(self.position, snapshot.tribeGatherPoint);
     if (distToGather > GATHER_DISTANCE_THRESHOLD) {
@@ -523,7 +533,7 @@ export function memoryAwarePolicy(
       return {
         actorId, type: "move",
         position: step,
-        reason: `returning to tribe gather point (dist=${distToGather})`,
+        reason: `[${mbti}] returning to tribe (dist=${distToGather}, social=${pm.socialSeekWeight.toFixed(1)})`,
       };
     }
   }
@@ -568,9 +578,181 @@ export function memoryAwarePolicy(
     }
   }
 
-  // ── Priority 5: Wander / idle ─────────────────────────────
+  // ── Priority 4.6: EXPLORE FAR BANK (MVP-03) ─────────────────
+  // Pressure-driven river crossing: only when left-bank food is scarce,
+  // agent knows about far-bank resources, and is fit enough to attempt.
+  if (
+    !isChild &&
+    hungerPressure < 60 && // not starving — there's no isCrisis variable, use inline check
+    thirstPressure < 60 &&
+    (self.needs.hp ?? 100) >= 60 &&
+    snapshot.timeOfDay !== "night"
+  ) {
+    // Check scarcity: are local berry resources running low?
+    const localBerryQty = snapshot.nearbyResources
+      .filter((r) => r.resourceType === "berry")
+      .reduce((sum, r) => sum + r.quantity, 0);
+
+    // Check if we know about far-bank resources (semantic or current perception)
+    const knowsFarBank = (self.semanticMemory ?? []).some(
+      (s) => s.fact === "far_bank_resource" as any
+    );
+    const seesFarBank = snapshot.farBankResources.length > 0;
+    const hasFarBankAwareness = knowsFarBank || seesFarBank;
+
+    // Check: do we have a parent of infant children? Don't risk drowning.
+    const hasInfantChildren = (self.childIds ?? []).some((cid) => {
+      const child = snapshot.nearbyEntities.find((ne) => ne.entityId === cid);
+      return child !== undefined; // child is nearby = still dependent
+    });
+
+    const shouldExplore = localBerryQty < 5 && hasFarBankAwareness && !hasInfantChildren;
+
+    if (shouldExplore) {
+      // What tile are we currently on?
+      const selfKey = `${self.position.x},${self.position.y}`;
+      const selfTerrain = snapshot.worldTiles?.[selfKey]?.terrain ?? "";
+
+      // CASE A: We're already ON a shallow_river tile → wade to the far side!
+      if (selfTerrain === "shallow_river") {
+        // Determine which direction is the "far bank" (away from our origin)
+        // By checking which adjacent tiles are NOT river/shallow_river
+        const riverMinX = self.position.x; // rough estimate
+        // Try moving in the +x direction (toward right bank) first
+        const candidates = [
+          { x: self.position.x + 1, y: self.position.y },
+          { x: self.position.x - 1, y: self.position.y },
+          { x: self.position.x, y: self.position.y + 1 },
+          { x: self.position.x, y: self.position.y - 1 },
+        ];
+        // Find a tile that is passable land (not river/shallow_river) on the far side
+        for (const cand of candidates) {
+          const cKey = `${cand.x},${cand.y}`;
+          const cTerrain = snapshot.worldTiles?.[cKey]?.terrain;
+          if (!cTerrain) continue;
+          // Wade to passable land, shallow_river (continue crossing), or riverbank (exit)
+          // Skip deep river
+          if (cTerrain === "river") continue;
+          // Prefer non-water land tiles
+          const isLand = cTerrain !== "shallow_river" && cTerrain !== "river";
+          if (isLand) {
+            return {
+              actorId, type: "wade" as any,
+              position: cand,
+              reason: `[far-bank] wading to far bank land (${cTerrain}) at (${cand.x},${cand.y})`,
+            };
+          }
+        }
+        // If no land found, try wading to another shallow_river tile
+        for (const cand of candidates) {
+          const cKey = `${cand.x},${cand.y}`;
+          const cTerrain = snapshot.worldTiles?.[cKey]?.terrain;
+          if (cTerrain === "shallow_river") {
+            return {
+              actorId, type: "wade" as any,
+              position: cand,
+              reason: `[far-bank] wading through shallow water at (${cand.x},${cand.y})`,
+            };
+          }
+        }
+      }
+
+      // CASE B: We know a shallow crossing and we're on dry land
+      // Do we know a shallow crossing point?
+      const knownCrossing = snapshot.nearestShallowCrossing
+        ?? (self.semanticMemory ?? []).find(
+          (s) => s.fact === "safe_crossing" as any && s.position
+        )?.position;
+
+      if (knownCrossing) {
+        const distToCrossing = manhattan(self.position, knownCrossing);
+        if (distToCrossing <= 1) {
+          // Adjacent to shallow water — move onto it (move action, not wade)
+          // shallow_river is passable, so normal move works
+          return {
+            actorId, type: "move",
+            position: knownCrossing,
+            reason: `[far-bank] stepping into shallow water at (${knownCrossing.x},${knownCrossing.y})`,
+          };
+        } else {
+          // Move toward the crossing point
+          const step = stepToward(self.position, knownCrossing);
+          return {
+            actorId, type: "move",
+            position: step,
+            reason: `[far-bank] heading to shallow crossing at (${knownCrossing.x},${knownCrossing.y}) dist=${distToCrossing}`,
+          };
+        }
+      } else if (seesFarBank) {
+        // We see far-bank resources but don't know a crossing — explore riverbank
+        const nearestRiver = snapshot.nearbyTerrain.find(
+          (t) => t.terrain === "riverbank" || t.terrain === "shallow_river"
+        );
+        if (nearestRiver) {
+          const step = stepToward(self.position, nearestRiver.position);
+          return {
+            actorId, type: "move",
+            position: step,
+            reason: `[far-bank] exploring riverbank for crossing (sees ${snapshot.farBankResources.length} far resources)`,
+          };
+        }
+      }
+    }
+
+    // Record far-bank sightings even if not ready to cross yet
+    // (builds up episodic → semantic memory for future use)
+    if (seesFarBank && !knowsFarBank) {
+      // Memory recording is handled by the agent-loop updateMemory call
+      // Here we just emit the FAR_BANK_SPOTTED event via the policy reason
+    }
+  }
+
+  // ── Priority 5: Explore / Wander (Phase 1: personality-driven) ──
+  // N+P types actively explore unvisited areas. S+J types stay near camp.
+  if (pm.exploreWeight > 1.0 && !isChild && (self.needs.hp ?? 100) >= pm.riskHpThreshold) {
+    // Exploration drive: move toward least-visited direction
+    // Pick a random direction biased by personality's wander radius
+    const visited = (self.episodicMemory ?? []).map((e) => e.position);
+    const radius = pm.wanderRadius;
+    // Try to find an unvisited tile within wander radius
+    const candidates: Vec2[] = [];
+    for (let dy = -radius; dy <= radius; dy++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        const tx = self.position.x + dx;
+        const ty = self.position.y + dy;
+        // Check passability
+        const tKey = `${tx},${ty}`;
+        const tTile = snapshot.worldTiles?.[tKey];
+        if (!tTile) continue;
+        const tDef = snapshot.terrainDefs?.[tTile.terrain];
+        if (!tDef?.passable) continue;
+        // Check if recently visited (in episodic memory)
+        const recentlyVisited = visited.some((v) => v.x === tx && v.y === ty);
+        if (!recentlyVisited) {
+          candidates.push({ x: tx, y: ty });
+        }
+      }
+    }
+    if (candidates.length > 0) {
+      // Pick the farthest unvisited tile (maximizes exploration)
+      const target = candidates.reduce((best, c) => {
+        const dBest = manhattan(self.position, best);
+        const dC = manhattan(self.position, c);
+        return dC > dBest ? c : best;
+      });
+      const step = stepToward(self.position, target);
+      clearTask(self);
+      return {
+        actorId, type: "move",
+        position: step,
+        reason: `[${mbti}] exploring (exploreWt=${pm.exploreWeight.toFixed(1)}, wanderR=${radius})`,
+      };
+    }
+  }
+
   clearTask(self);
-  return { actorId, type: "idle", reason: "no resources visible or memorized, near tribe" };
+  return { actorId, type: "idle", reason: `[${mbti}] idle near tribe` };
 }
 
 // ── Helper: Decide what to build ────────────────────────────
@@ -820,49 +1002,8 @@ function findNearestOfType(
 
 /**
  * Terrain-aware step toward a target.
- * Evaluates all 8 neighbors, filters out impassable tiles,
- * then picks the one that minimizes: manhattan(candidate, target) + terrainCostWeight.
- *
- * MVP-02Y: Uses module-level _worldTiles/_terrainDefs set by memoryAwarePolicy().
- * Falls back to simple sign-based step if no terrain data available.
+ * Delegates to extracted stepToward utility, passing module-level terrain context.
  */
-const TERRAIN_COST_WEIGHT = 1.5; // How much terrain cost matters vs distance
-
 function stepToward(from: Vec2, to: Vec2): Vec2 {
-  // Fast path: no terrain data, use simple step
-  if (!_worldTiles || !_terrainDefs) {
-    const dx = Math.sign(to.x - from.x);
-    const dy = Math.sign(to.y - from.y);
-    if (dx === 0 && dy === 0) return from;
-    return { x: from.x + dx, y: from.y + dy };
-  }
-
-  // Generate all 8 adjacent candidates
-  const candidates: { pos: Vec2; score: number }[] = [];
-  for (let dy = -1; dy <= 1; dy++) {
-    for (let dx = -1; dx <= 1; dx++) {
-      if (dx === 0 && dy === 0) continue;
-      const cx = from.x + dx;
-      const cy = from.y + dy;
-      const key = `${cx},${cy}`;
-      const tile = _worldTiles[key];
-      if (!tile) continue; // out of bounds
-
-      const tDef = _terrainDefs[tile.terrain];
-      if (!tDef || !tDef.passable) continue; // impassable
-
-      const distToTarget = manhattan({ x: cx, y: cy }, to);
-      const terrainPenalty = (tDef.moveCostMultiplier - 1) * TERRAIN_COST_WEIGHT;
-      candidates.push({
-        pos: { x: cx, y: cy },
-        score: distToTarget + terrainPenalty,
-      });
-    }
-  }
-
-  if (candidates.length === 0) return from; // stuck
-
-  // Pick lowest score
-  candidates.sort((a, b) => a.score - b.score);
-  return candidates[0].pos;
+  return stepTowardRaw(from, to, _worldTiles, _terrainDefs);
 }

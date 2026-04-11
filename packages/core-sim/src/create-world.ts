@@ -1,11 +1,12 @@
 import {
   WorldState, TileState, EntityState, ResourceNodeState, TribeState, EnvironmentState,
-  EntityId, TileId, ResourceNodeId, TribeId, Vec2,
+  EntityId, TileId, ResourceNodeId, TribeId, Vec2, Personality, EmotionType,
   tileKey, createRNG,
 } from "@project-god/shared";
-import { calculateTemperature, calculateTimeOfDay, DEFAULT_DAY_LENGTH } from "./systems/environment-tick";
+import { calculateTemperature, calculateTimeOfDay, calculateLightLevel, DEFAULT_DAY_LENGTH } from "./systems/environment-tick";
 import type { NeedDef, TerrainDef } from "./content-types";
 import { generateMap } from "./map-generator";
+import namePool from "../../content-data/data/names.json";
 
 export interface WorldConfig {
   seed: number;
@@ -124,6 +125,18 @@ export function createWorld(config: WorldConfig): WorldState {
     // bornAtTick is negative (entity "existed before" world started)
     const bornAtTick = -(startAge * 40); // 40 = DEFAULT_DAY_LENGTH = TICKS_PER_YEAR
 
+    // Phase 1: Generate random MBTI personality for Gen0 entities
+    const personality: Personality = {
+      ei: rng.next() * 2 - 1,
+      sn: rng.next() * 2 - 1,
+      tf: rng.next() * 2 - 1,
+      jp: rng.next() * 2 - 1,
+    };
+
+    // LLM Cognition: Assign name from pool
+    const nameList = sex === "male" ? namePool.male : namePool.female;
+    const name = nameList[rng.nextInt(0, nameList.length - 1)];
+
     entities[id] = {
       id, type: "human", tribeId: "tribe_0" as TribeId,
       position: pos,
@@ -137,6 +150,13 @@ export function createWorld(config: WorldConfig): WorldState {
       bornAtTick,
       // MVP-02Z: Apply starting skills from overrides
       skills: override?.skillsOverride ? { ...override.skillsOverride } : undefined,
+      // Phase 1: MBTI personality
+      personality,
+      // LLM Cognition: Agent identity
+      name,
+      emotion: "calm" as EmotionType,
+      innerThought: "",
+      personalGoal: "survive and thrive",
     };
   }
 
@@ -171,6 +191,7 @@ export function createWorld(config: WorldConfig): WorldState {
     dayLength: DEFAULT_DAY_LENGTH,
     temperature: calculateTemperature(0, DEFAULT_DAY_LENGTH),
     timeOfDay: calculateTimeOfDay(0, DEFAULT_DAY_LENGTH),
+    lightLevel: calculateLightLevel(0, DEFAULT_DAY_LENGTH),
   };
 
   return {
@@ -179,5 +200,7 @@ export function createWorld(config: WorldConfig): WorldState {
     // MVP-05: Divine economy
     divinePoints: 5,
     maxDivinePoints: 20,
+    // Fog of war: no tiles explored at start
+    exploredTiles: {},
   };
 }

@@ -53,6 +53,23 @@ export interface DebugAgentView {
   preferences: Record<string, number>;
   /** Home structure ID. MVP-02X. */
   homeStructureId?: string;
+  /** MBTI 4-letter code (e.g. "INTJ"). Phase 1. */
+  mbtiCode: string;
+  /** Raw personality axes for tooltip detail. Phase 1. */
+  personality?: { ei: number; sn: number; tf: number; jp: number };
+  // ── LLM Cognition ─────────────────────────────────────────
+  /** Human-readable name. */
+  name: string;
+  /** Current emotional state. */
+  emotion: string;
+  /** Emotion emoji for display. */
+  emotionEmoji: string;
+  /** Last inner thought from LLM or empty string. */
+  innerThought: string;
+  /** Current personal goal. */
+  personalGoal: string;
+  /** Number of remaining plan steps. */
+  planStepsRemaining: number;
   lastAction?: ActionIntent;
   lastActionResult?: "validated" | "rejected";
   lastActionReason?: string;
@@ -103,8 +120,10 @@ export interface DebugTribeView {
 
 export interface DebugEnvironmentView {
   temperature: number;
-  timeOfDay: "day" | "dusk" | "night";
+  timeOfDay: "dawn" | "day" | "dusk" | "night";
   dayLength: number;
+  /** Continuous light level 0.0 (pitch black) to 1.0 (full sun). */
+  lightLevel: number;
 }
 
 // ─── Debug Projection ────────────────────────────────────────

@@ -27,6 +27,7 @@ function pick<T>(items: T[], tick: number): T {
 }
 
 function timeDesc(ctx: NarrativeContext): string {
+  if (ctx.timeOfDay === "dawn") return "As the first light touches the horizon";
   if (ctx.timeOfDay === "night") return "In the darkness of night";
   if (ctx.temperature !== undefined && ctx.temperature < 40) return "Against the biting cold";
   return "Under the open sky";

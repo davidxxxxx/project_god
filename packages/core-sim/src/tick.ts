@@ -29,8 +29,11 @@ import { tickLifecycle } from "./systems/lifecycle-tick";
 import { tickFaith } from "./systems/faith-tick";
 import { tickSpiritual } from "./systems/spiritual-tick";
 import { tickDoctrine } from "./systems/doctrine-tick";
+import { socialDynamicsTick } from "./systems/social-dynamics-tick";
+import { computeFogOfWar } from "./systems/fog-of-war";
 import { validateAction, type ValidationContext } from "./validate";
 import { executeAction, type ExecutionContext } from "./execute";
+import { recordActionResult } from "@project-god/agent-runtime";
 import type { NeedDef, ResourceDef, ActionDef, TerrainDef, StructureDef, SkillDef, TechnologyDef, LifecycleDef, FaithDef, RecipeDef } from "./content-types";
 
 export interface TickContext {
@@ -118,6 +121,9 @@ export function tickWorld(
   // ── 4.7. Tick tribes (member cleanup + gatherPoint) ──────
   events.push(...tickTribes(world));
 
+  // ── 4.8. Social dynamics (leader + tension + split) ──────
+  events.push(...socialDynamicsTick(world));
+
   // ── 5+6. Validate and execute ────────────────────────────
   const valCtx: ValidationContext = { actions: ctx.actions, terrain: ctx.terrain, structures: ctx.structures, skills: ctx.skills, faith: ctx.faith, resources: ctx.resources, recipes: ctx.recipes };
   const exeCtx: ExecutionContext = { resources: ctx.resources, needs: ctx.needs, structures: ctx.structures, skills: ctx.skills, faith: ctx.faith, recipes: ctx.recipes, terrain: ctx.terrain };
@@ -134,12 +140,18 @@ export function tickWorld(
         intent,
         reason: outcome.reason,
       } as ActionRejectedEvent);
+      // Feed rejection back to LLM for learning
+      recordActionResult(intent.actorId, intent.type, `rejected: ${outcome.reason}`);
     } else {
       accepted.push(outcome);
       const actionEvents = executeAction(outcome, world, exeCtx);
       events.push(...actionEvents);
+      // Feed success back to LLM for learning
+      recordActionResult(intent.actorId, intent.type, "success");
     }
   }
+  // ── 7. Compute fog of war ─────────────────────────────────
+  const fogState = computeFogOfWar(world);
 
-  return { world, events, accepted, rejections };
+  return { world, events, accepted, rejections, fogState };
 }

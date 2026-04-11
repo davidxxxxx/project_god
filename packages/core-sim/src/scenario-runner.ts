@@ -14,6 +14,7 @@ import { tickWorld, type TickContext } from "./tick";
 import { buildProjection } from "./snapshot";
 import { buildTickMetrics, aggregateMetrics } from "./metrics";
 import { performMiracle as applyMiracle, type MiracleRequest } from "./systems/faith-tick";
+import { runCognitivePhase } from "@project-god/agent-runtime";
 
 export type DecisionFn = (entityId: string, world: WorldState) => ActionIntent;
 export type PostTickHook = (world: WorldState, result: TickResult) => void;
@@ -39,7 +40,7 @@ export class ScenarioRunner {
     this.world = createWorld(config.worldConfig);
   }
 
-  /** Advance exactly one tick. */
+  /** Advance exactly one tick (sync — for tests and non-LLM scenarios). */
   step(): TickResult {
     const intents: ActionIntent[] = [];
     for (const entityId of Object.keys(this.world.entities)) {
@@ -63,6 +64,30 @@ export class ScenarioRunner {
 
     this.metricsHistory.push(buildTickMetrics(this.world, result));
     return result;
+  }
+
+  /**
+   * Advance one tick WITH cognitive pause.
+   *
+   * Flow:
+   * 1. Run cognitive phase — batch all LLM calls concurrently (await)
+   * 2. Run normal tick (decisions use freshly-set plans)
+   *
+   * The caller (TimeController) awaits this, effectively pausing
+   * the sim loop while LLM processes.
+   *
+   * @returns The tick result and how many agents got new cognition.
+   */
+  async stepWithCognition(): Promise<{ result: TickResult; cognitionCount: number }> {
+    // Phase 1: Run LLM batch (awaited — sim pauses here)
+    const cognitionCount = await runCognitivePhase(
+      this.world,
+      this.config.tickContext.terrain,
+    );
+
+    // Phase 2: Normal tick (all agents now have fresh plans)
+    const result = this.step();
+    return { result, cognitionCount };
   }
 
   /** Run N ticks, return full result. */
@@ -99,6 +124,16 @@ export class ScenarioRunner {
   /** Get current world state (read only). */
   getWorld(): WorldState {
     return this.world;
+  }
+
+  /** Get fog render data for the current tick (visible + explored tiles). */
+  getFogRenderData(): { visibleTiles: Set<string>; exploredTiles: Record<string, boolean> } | undefined {
+    const lastResult = this.tickHistory[this.tickHistory.length - 1];
+    if (!lastResult?.fogState) return undefined;
+    return {
+      visibleTiles: lastResult.fogState.visibleTiles,
+      exploredTiles: this.world.exploredTiles ?? {},
+    };
   }
 
   /** Get accumulated metrics. */
@@ -255,12 +290,13 @@ function findNearest(self: EntityState, resources: ResourceNodeState[], type: st
 // ─── Memory-aware decision function (MVP-02) ────────────────
 
 import {
-  perceive, memoryAwarePolicy,
+  perceive, memoryAwarePolicy, decideActionV3,
   updateMemoryFromEvents, enrichEventsWithPositions,
   updateSocialMemory,
   distillSemanticMemory, decaySemanticMemory,
   teachToCulturalMemory, inheritFromCulturalMemory, decayCulturalMemory,
   updateRecipeObservation, updatePreferences,
+  recordFarBankSighting, recordCrossingExperience,
 } from "@project-god/agent-runtime";
 
 /**
@@ -274,6 +310,20 @@ export function defaultMemoryDecision(
   return (entityId: string, world: WorldState): ActionIntent => {
     const snapshot = perceive(entityId, world, undefined, terrainDefs);
     return memoryAwarePolicy(snapshot, needsConfig, world.tick);
+  };
+}
+
+/**
+ * Creates a cognitive decision function (LLM Cognition).
+ * Uses LLM for periodic reflection/planning with rule-based fallback.
+ * The cognitive adapter must be initialized via setCognitiveConfig() first.
+ */
+export function defaultCognitiveDecision(
+  needsConfig: Record<string, { max: number; criticalThreshold: number }>,
+  terrainDefs?: Record<string, { moveCostMultiplier: number; passable: boolean }>
+): DecisionFn {
+  return (entityId: string, world: WorldState): ActionIntent => {
+    return decideActionV3(entityId, world, needsConfig, terrainDefs);
   };
 }
 
@@ -310,6 +360,41 @@ export function defaultPostTickMemoryHook(): PostTickHook {
 
       // Experience-based preferences (MVP-02X): outcome → weight shifts
       updatePreferences(entity, enriched, world.tick);
+
+      // MVP-03: Far-bank resource sighting → memory formation + event emission
+      const farBankSnapshot = perceive(entity.id, world);
+      // Throttle: only emit FAR_BANK_SPOTTED once every 20 ticks per entity
+      const lastFarBankTick = (entity.attributes as any)?.["last_far_bank_spotted_tick"] ?? -999;
+      const farBankThrottled = world.tick - lastFarBankTick < 20;
+      for (const fb of farBankSnapshot.farBankResources) {
+        const sightEvents = recordFarBankSighting(entity, fb.resourceType, fb.position, world.tick);
+        result.events.push(...sightEvents);
+        // Emit FAR_BANK_SPOTTED event (throttled to avoid spam)
+        if (!farBankThrottled) {
+          result.events.push({
+            type: "FAR_BANK_SPOTTED",
+            tick: world.tick,
+            entityId: entity.id,
+            resourceType: fb.resourceType,
+            position: { ...fb.position },
+          } as any);
+          entity.attributes["last_far_bank_spotted_tick"] = world.tick;
+        }
+      }
+
+      // MVP-03: Crossing experience → memory formation
+      for (const evt of enriched) {
+        if (evt.type === "WADE_ATTEMPTED" && (evt as any).entityId === entity.id) {
+          const wadeEvt = evt as any;
+          const crossEvents = recordCrossingExperience(
+            entity,
+            wadeEvt.success ? wadeEvt.to : wadeEvt.from,
+            wadeEvt.success,
+            world.tick
+          );
+          result.events.push(...crossEvents);
+        }
+      }
 
       // Cultural teaching + inheritance (MVP-03-B)
       if (world.tribes && entity.tribeId) {

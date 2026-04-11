@@ -12,10 +12,12 @@ export interface ResourceDef {
   restoresNeed: Record<string, number>;
   maxQuantity: number;
   regenPerTick: number;
-  /** Resource category: food, drink, material. MVP-02X. */
+  /** Resource category: food, drink, material, tool. MVP-02X. */
   category?: string;
   /** If set, this resource requires 'harvest' action instead of 'gather'. */
   harvestAction?: string;
+  /** Spoilage rate per tick (0 = never spoils, 0.05 = slow spoil). Phase 3. */
+  spoilRate?: number;
 }
 
 export interface ActionDef {
@@ -47,6 +49,8 @@ export interface StructureDef {
   isSpiritualCenter?: boolean;
   /** Minimum faith required to build this structure. MVP-02X. */
   faithCondition?: number;
+  /** Technology required to build. Phase 3. */
+  requiresTech?: string;
 }
 
 export interface SkillDef {
@@ -68,23 +72,33 @@ export interface RecipeDef {
   inputs: Record<string, number>;
   /** Output items produced (type → quantity). */
   outputs: Record<string, number>;
-  /** Must be near this structure type to craft. */
-  requiresNearby: string;
+  /** Must be near this structure type to craft. Null = no structure needed. */
+  requiresNearby: string | null;
   /** Skill required (null = no skill needed). */
   requiredSkill: string | null;
   /** Skill proficiency gain per craft. */
   skillGainOnCraft: number;
   description: string;
+  /** Technology required to use this recipe. Phase 3. */
+  requiredTech?: string;
 }
 
 export interface TechnologyDef {
   displayName: string;
-  /** Skill id that tribe members need to contribute. */
-  requiredSkill: string;
+  /** Skill id that tribe members need to contribute. Null = no skill needed. */
+  requiredSkill: string | null;
   /** Minimum number of skilled members to unlock. */
   minSkilledMembers: number;
   /** Structures that become buildable once unlocked. */
   unlocksStructures: string[];
+  /** Other technology IDs that must be unlocked first. Phase 3. */
+  prerequisites?: string[];
+  /** Actions that become available once unlocked. Phase 3. */
+  unlocksActions?: string[];
+  /** Recipes that become available once unlocked. Phase 3. */
+  unlocksRecipes?: string[];
+  /** Minimum tribe population for auto-unlock (e.g. language at 5). Phase 3. */
+  minTribePopulation?: number;
 }
 
 /** Lifecycle balance constants (MVP-04). Loaded from lifecycle.json. */

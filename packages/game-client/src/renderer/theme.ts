@@ -26,12 +26,13 @@ export const COLOR_TILE = 0x1a1e2e;
 
 /** Terrain-specific tile colors. MVP-02Y. */
 export const COLOR_TERRAIN: Record<string, number> = {
-  grass:     0x1a2e1a,  // dark green
-  forest:    0x0d1f0d,  // darker green
-  rock:      0x2a2a2f,  // dark gray
-  swamp:     0x1a1f15,  // murky dark
-  river:     0x0a1530,  // deep blue
-  riverbank: 0x1a2530,  // blue-gray
+  grass:          0x1a2e1a,  // dark green
+  forest:         0x0d1f0d,  // darker green
+  rock:           0x2a2a2f,  // dark gray
+  swamp:          0x1a1f15,  // murky dark
+  river:          0x0a1530,  // deep blue
+  riverbank:      0x1a2530,  // blue-gray
+  shallow_river:  0x1a3555,  // lighter blue — crossable (MVP-03)
 };
 
 /** Agent – alive (matches --accent-green). */
@@ -76,11 +77,25 @@ export const COLOR_STRUCTURE_DEAD = 0x505050;
 /** Gather point (matches yellow tint). */
 export const COLOR_GATHER_POINT = 0xffff64;
 
-/** Night mask overlay color. */
-export const COLOR_NIGHT_MASK = 0x060a1e;
+// ── Fog of War ───────────────────────────────────────────────
 
-/** Night mask opacity (0 = transparent, 1 = opaque). */
-export const NIGHT_MASK_ALPHA = 0.45;
+/** Unexplored tile mask (full black). */
+export const COLOR_FOG_UNEXPLORED = 0x000000;
+/** Unexplored tile opacity. */
+export const FOG_UNEXPLORED_ALPHA = 0.92;
+
+/** Explored-but-not-visible tile mask (dark blue-gray). */
+export const COLOR_FOG_EXPLORED = 0x0a0a1a;
+/** Explored tile opacity. */
+export const FOG_EXPLORED_ALPHA = 0.55;
+
+/** Dawn ambient tint overlay. */
+export const COLOR_DAWN_TINT = 0x2a1800;
+/** Dusk ambient tint overlay. */
+export const COLOR_DUSK_TINT = 0x1a0a00;
+/** Night ambient tint overlay. */
+export const COLOR_NIGHT_TINT = 0x060a1e;
+
 
 /** Shrine structure – active (MVP-07A). */
 export const COLOR_SHRINE = 0xa78bfa;

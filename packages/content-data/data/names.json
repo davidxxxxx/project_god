@@ -1,0 +1,21 @@
+{
+  "_doc": "Stone Age name pool. Short, 2-3 syllable names inspired by proto-linguistic patterns. No modern names.",
+  "male": [
+    "Arak", "Boru", "Cavu", "Duro", "Enki", "Fenn", "Goro", "Hatu",
+    "Iku", "Jaro", "Kael", "Lonu", "Mako", "Naru", "Odan", "Paku",
+    "Riven", "Sato", "Taro", "Udo", "Vorn", "Weku", "Yanu", "Ziru",
+    "Ashi", "Bren", "Daku", "Elar", "Gann", "Hova", "Jomu", "Kiru",
+    "Leku", "Moru", "Neth", "Oran", "Piru", "Raku", "Senu", "Tovu",
+    "Ulam", "Varo", "Wanu", "Yoku", "Zenn", "Aron", "Boku", "Cero",
+    "Dima", "Ekon"
+  ],
+  "female": [
+    "Aela", "Bira", "Cana", "Dara", "Enna", "Faya", "Gala", "Hani",
+    "Isha", "Jana", "Kala", "Luna", "Mika", "Neva", "Ona", "Pala",
+    "Rina", "Siva", "Tala", "Uma", "Veda", "Wila", "Yara", "Zena",
+    "Adia", "Bela", "Dena", "Eska", "Fira", "Gova", "Hala", "Ilma",
+    "Jona", "Keva", "Lira", "Mara", "Nola", "Pena", "Reva", "Suna",
+    "Tura", "Vana", "Wera", "Yula", "Zara", "Ama", "Beva", "Cira",
+    "Dola", "Enya"
+  ]
+}

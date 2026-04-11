@@ -1,0 +1,54 @@
+{
+  "_doc": "MBTI personality system. Each axis is a continuous value from -1.0 to +1.0.",
+
+  "axes": {
+    "ei": {
+      "displayName": "Extraversion / Introversion",
+      "negative": "Introvert",
+      "positive": "Extravert",
+      "negativeCode": "I",
+      "positiveCode": "E"
+    },
+    "sn": {
+      "displayName": "Sensing / Intuition",
+      "negative": "Sensing",
+      "positive": "Intuition",
+      "negativeCode": "S",
+      "positiveCode": "N"
+    },
+    "tf": {
+      "displayName": "Thinking / Feeling",
+      "negative": "Thinking",
+      "positive": "Feeling",
+      "negativeCode": "T",
+      "positiveCode": "F"
+    },
+    "jp": {
+      "displayName": "Judging / Perceiving",
+      "negative": "Judging",
+      "positive": "Perceiving",
+      "negativeCode": "J",
+      "positiveCode": "P"
+    }
+  },
+
+  "modifierRanges": {
+    "foodSafetyStock":      { "min": 2, "max": 7, "axis": "jp", "direction": "negative", "comment": "J types stockpile more, P types live loose" },
+    "exploreWeight":        { "min": 0.5, "max": 2.0, "axis": "sn", "direction": "positive", "comment": "N types explore more eagerly" },
+    "socialSeekWeight":     { "min": 0.3, "max": 1.8, "axis": "ei", "direction": "positive", "comment": "E types seek group more" },
+    "buildPriorityBonus":   { "min": -10, "max": 15, "axis": "jp", "direction": "negative", "comment": "J types build earlier (lower threshold needed)" },
+    "innovationChance":     { "min": 0.7, "max": 1.6, "axis": "sn", "direction": "positive", "comment": "N types invent/discover more" },
+    "trustGainRate":        { "min": 0.6, "max": 1.5, "axis": "ei", "direction": "positive", "comment": "E types gain trust faster" },
+    "resourceShareChance":  { "min": 0.1, "max": 0.6, "axis": "tf", "direction": "positive", "comment": "F types share resources more readily" },
+    "wadeRiskTolerance":    { "min": 50, "max": 85, "axis": "sn", "direction": "positive", "comment": "N types brave lower HP for crossing. Value = min HP to attempt" },
+    "faithAffinity":        { "min": 0.5, "max": 1.8, "axis": "tf", "direction": "positive", "comment": "F types pray more and gain more faith" },
+    "wanderRadius":         { "min": 3, "max": 8, "axis": "sn", "direction": "positive", "comment": "N types wander farther when idle" },
+    "hungerAbortThreshold": { "min": 25, "max": 45, "axis": "jp", "direction": "negative", "comment": "J types abort non-survival earlier (higher threshold)" }
+  },
+
+  "inheritance": {
+    "parentBlendWeight": 0.7,
+    "mutationRange": 0.3,
+    "comment": "Child = 70% parent average + 30% random mutation"
+  }
+}

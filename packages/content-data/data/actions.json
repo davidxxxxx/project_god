@@ -1,4 +1,5 @@
 {
+  "_doc": "Action definitions. range = max manhattan distance to target. Batch 1: social + production + exploration + creative.",
   "idle": { "range": 0 },
   "move": { "range": 1 },
   "gather": { "range": 1 },
@@ -11,5 +12,58 @@
   "drop": { "range": 0 },
   "pray": { "range": 0 },
   "perform_ritual": { "range": 1 },
-  "participate_ritual": { "range": 3 }
+  "participate_ritual": { "range": 3 },
+  "plant": { "range": 0 },
+  "wade": { "range": 1 },
+
+  "talk": {
+    "range": 2,
+    "requiresNearbyEntity": true,
+    "requiresTech": "language",
+    "description": "Converse with a nearby person. Builds trust and social memory."
+  },
+  "teach": {
+    "range": 2,
+    "requiresNearbyEntity": true,
+    "requiresTech": "language",
+    "requiresSkill": true,
+    "description": "Share a skill with a nearby person. Target gains observation progress."
+  },
+  "trade": {
+    "range": 2,
+    "requiresNearbyEntity": true,
+    "requiresInventoryAny": true,
+    "description": "Exchange items with a nearby person."
+  },
+  "gift": {
+    "range": 2,
+    "requiresNearbyEntity": true,
+    "requiresInventoryAny": true,
+    "description": "Give items to a nearby person. Increases trust significantly."
+  },
+  "comfort": {
+    "range": 2,
+    "requiresNearbyEntity": true,
+    "description": "Console a distressed nearby person. Calms their emotion."
+  },
+
+  "craft": {
+    "range": 0,
+    "requiresTech": "stone_tools",
+    "description": "Create a tool or item from raw materials."
+  },
+  "fish": {
+    "range": 1,
+    "requiresAdjacentWater": true,
+    "description": "Catch fish from adjacent water tile."
+  },
+  "scout": {
+    "range": 0,
+    "description": "Survey the surroundings carefully. Reveals tiles in extended radius."
+  },
+  "experiment": {
+    "range": 0,
+    "requiresInventoryCount": 2,
+    "description": "Try combining items in new ways. May discover a recipe."
+  }
 }

@@ -67,7 +67,17 @@ export type SimEventType =
   | "HP_CHANGED"
   | "RECIPE_LEARNED"
   | "RESOURCE_PLANTED"
-  | "CHILD_FED";
+  | "CHILD_FED"
+  // MVP-03: River crossing
+  | "WADE_ATTEMPTED"
+  | "FAR_BANK_SPOTTED"
+  // Phase 3: Social/Production/Exploration/Creative
+  | "SOCIAL_INTERACTION"
+  | "ITEM_GIFTED"
+  | "TRADE_COMPLETED"
+  | "ITEM_CRAFTED"
+  | "AREA_SCOUTED"
+  | "EXPERIMENT_ATTEMPTED";
 
 // ─── Per-Type Payloads ───────────────────────────────────────
 
@@ -244,7 +254,7 @@ export interface EnvironmentChangedEvent {
   readonly type: "ENVIRONMENT_CHANGED";
   readonly tick: number;
   readonly temperature: number;
-  readonly timeOfDay: "day" | "night";
+  readonly timeOfDay: "dawn" | "day" | "dusk" | "night";
 }
 
 export interface ExposureWarningEvent {
@@ -314,8 +324,13 @@ export type SimEvent =
   | ResourceHarvestedEvent
   | ResourceCookedEvent
   | FuelAddedEvent
+  // MVP-03: River crossing
+  | WadeAttemptedEvent
+  | FarBankSpottedEvent
   | HomeClaimedEvent
-  | HpChangedEvent;
+  | HpChangedEvent
+  // Phase 3: Generic game events
+  | GenericGameEvent;
 
 // ─── MVP-03-B: Knowledge Events ─────────────────────────────
 
@@ -549,4 +564,46 @@ export interface HpChangedEvent {
   readonly oldHp: number;
   readonly newHp: number;
   readonly cause: string;
+}
+
+// ─── MVP-03: River Crossing Events ───────────────────────────
+
+/** Emitted when an agent attempts to wade across shallow water. */
+export interface WadeAttemptedEvent {
+  readonly type: "WADE_ATTEMPTED";
+  readonly tick: number;
+  readonly entityId: EntityId;
+  readonly from: Vec2;
+  readonly to: Vec2;
+  readonly success: boolean;
+  /** HP lost on failure. */
+  readonly hpLost?: number;
+  /** Item type dropped in river on failure. */
+  readonly itemLost?: string;
+  /** Success probability that was rolled against. */
+  readonly successChance: number;
+}
+
+/** Emitted when an agent spots resources across the river. */
+export interface FarBankSpottedEvent {
+  readonly type: "FAR_BANK_SPOTTED";
+  readonly tick: number;
+  readonly entityId: EntityId;
+  readonly resourceType: string;
+  readonly position: Vec2;
+}
+
+// ─── Phase 3: Generic Game Events ────────────────────────────
+
+/**
+ * Flexible event type for Phase 3 actions (social, craft, scout, experiment).
+ * Uses a message string for human-readable description.
+ */
+export interface GenericGameEvent {
+  readonly type: "SOCIAL_INTERACTION" | "ITEM_GIFTED" | "TRADE_COMPLETED"
+    | "ITEM_CRAFTED" | "AREA_SCOUTED" | "EXPERIMENT_ATTEMPTED";
+  readonly tick: number;
+  readonly entityId: EntityId;
+  readonly message: string;
+  readonly detail?: string;
 }

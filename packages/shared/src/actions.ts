@@ -13,7 +13,6 @@ export type ActionType =
   | "drop"
   | "cook"       // MVP-02X: transform raw→cooked at fire
   | "add_fuel"   // MVP-02X: add wood to fire pit
-  // Future phases:
   | "rest"
   | "pray"
   | "build"
@@ -22,7 +21,22 @@ export type ActionType =
   | "perform_ritual"
   | "participate_ritual"
   // MVP-02Y: Planting
-  | "plant";
+  | "plant"
+  // MVP-03: River crossing
+  | "wade"
+  // Phase 3: Social actions
+  | "talk"
+  | "teach"
+  | "trade"
+  | "gift"
+  | "comfort"
+  // Phase 3: Production actions
+  | "craft"
+  | "fish"
+  // Phase 3: Exploration actions
+  | "scout"
+  // Phase 3: Creative actions
+  | "experiment";
 
 // ─── ActionIntent ────────────────────────────────────────────
 // agent-runtime produces these. It is a REQUEST, not a mutation.

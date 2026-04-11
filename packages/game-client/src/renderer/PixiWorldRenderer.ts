@@ -16,7 +16,7 @@ import { TileLayer } from "./layers/TileLayer";
 import { ResourceLayer } from "./layers/ResourceLayer";
 import { StructureLayer } from "./layers/StructureLayer";
 import { AgentLayer } from "./layers/AgentLayer";
-import { OverlayLayer } from "./layers/OverlayLayer";
+import { OverlayLayer, type FogRenderData } from "./layers/OverlayLayer";
 import { TILE_PITCH, COLOR_BG } from "./theme";
 import type { DebugProjection } from "@project-god/shared";
 
@@ -86,7 +86,7 @@ export class PixiWorldRenderer {
    * Update all layers from a fresh DebugProjection snapshot.
    * Called once per simulation tick (or per render frame during animation).
    */
-  update(proj: DebugProjection, selectedAgentId: string | null): void {
+  update(proj: DebugProjection, selectedAgentId: string | null, fogData?: FogRenderData): void {
     if (!this.app) return;
 
     // 1. Update tile terrain data + reset colors
@@ -99,7 +99,7 @@ export class PixiWorldRenderer {
     this.resourceLayer.update(proj.resources, this.cols, this.rows);
     this.structureLayer.update(proj.structures, this.cols, this.rows);
     this.agentLayer.update(proj.agents, selectedAgentId, this.cols, this.rows);
-    this.overlayLayer.update(proj.environment, proj.tribes, this.cols, this.rows);
+    this.overlayLayer.update(proj.environment, proj.tribes, this.cols, this.rows, fogData);
   }
 
   /**

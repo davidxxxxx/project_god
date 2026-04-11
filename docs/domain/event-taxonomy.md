@@ -75,3 +75,8 @@
 - `DOCTRINE_FORMED`: 部落形成新教义（由特定事件触发）
 - `DOCTRINE_VIOLATED`: 教义被违反（如火灭导致 fire_sacred 违反）
 - `DOCTRINE_REINFORCED`: 教义被强化（触发事件再次发生）
+
+## MVP-03 河流穿越事件
+
+- `WADE_ATTEMPTED`: Agent 尝试涉水过河（成功/失败含 HP 损失、物品掉落）
+- `FAR_BANK_SPOTTED`: Agent 在河岸感知到对岸资源（节流 20 tick/次）

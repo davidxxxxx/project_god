@@ -6,7 +6,8 @@
     "paths": {
       "@project-god/shared": ["../shared/src"],
       "@project-god/agent-runtime": ["../agent-runtime/src"],
-      "@project-god/content-data": ["../content-data/src"]
+      "@project-god/content-data": ["../content-data/src"],
+      "@project-god/content-data/data/*": ["../content-data/data/*"]
     }
   },
   "include": ["src/**/*"]

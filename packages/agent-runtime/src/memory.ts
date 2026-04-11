@@ -765,3 +765,117 @@ export function claimHome(
   } as unknown as SimEvent];
 }
 
+// ── MVP-03: River Crossing Memory ──────────────────────────────
+
+/**
+ * Record far-bank resource sighting in episodic memory.
+ * After repeated sightings (≥3), a semantic "far_bank_resource" fact is formed.
+ */
+export function recordFarBankSighting(
+  entity: EntityState,
+  resourceType: string,
+  position: Vec2,
+  tick: number
+): SimEvent[] {
+  if (!entity.alive) return [];
+  const events: SimEvent[] = [];
+
+  // Add episodic memory of sighting
+  recordEpisode(entity, {
+    tick,
+    type: "spotted_far_resource",
+    position: { ...position },
+    resourceType,
+    detail: `saw ${resourceType} across river at (${position.x},${position.y})`,
+  });
+
+  // Check if we should distill a semantic fact
+  // Count how many times we've spotted far-bank resources at similar positions
+  const FAR_BANK_DISTILL = 3;
+  const sightings = (entity.episodicMemory ?? []).filter(
+    (e) => e.type === "spotted_far_resource" && e.resourceType === resourceType
+  ).length;
+
+  if (sightings >= FAR_BANK_DISTILL) {
+    // Distill into semantic memory
+    if (!entity.semanticMemory) entity.semanticMemory = [];
+    const alreadyKnown = entity.semanticMemory.some(
+      (s) => s.fact === "far_bank_resource" && s.subject === resourceType
+    );
+    if (!alreadyKnown) {
+      entity.semanticMemory.push({
+        fact: "far_bank_resource",
+        position: { ...position },
+        subject: resourceType,
+        confidence: 0.8,
+        formedAtTick: tick,
+        lastReinforcedTick: tick,
+      });
+      events.push({
+        type: "SEMANTIC_FORMED",
+        tick,
+        entityId: entity.id,
+        fact: "far_bank_resource",
+        subject: resourceType,
+        position: { ...position },
+        confidence: 0.8,
+      } as SimEvent);
+    }
+  }
+
+  return events;
+}
+
+/**
+ * Record crossing experience (success or failure) in memory.
+ * Successful crossings form "safe_crossing" facts.
+ * Failed crossings form "dangerous_crossing" facts.
+ */
+export function recordCrossingExperience(
+  entity: EntityState,
+  crossingPosition: Vec2,
+  success: boolean,
+  tick: number
+): SimEvent[] {
+  if (!entity.alive) return [];
+  const events: SimEvent[] = [];
+
+  if (!entity.semanticMemory) entity.semanticMemory = [];
+
+  const factType = success ? "safe_crossing" : "dangerous_crossing";
+
+  // Check if we already have this fact
+  const existing = entity.semanticMemory.find(
+    (s) => s.fact === factType &&
+           s.position?.x === crossingPosition.x &&
+           s.position?.y === crossingPosition.y
+  );
+
+  if (existing) {
+    // Reinforce existing knowledge
+    existing.confidence = Math.min(1.0, existing.confidence + 0.2);
+    existing.lastReinforcedTick = tick;
+  } else {
+    // Create new fact
+    entity.semanticMemory.push({
+      fact: factType as any,
+      position: { ...crossingPosition },
+      subject: "shallow_river",
+      confidence: success ? 0.7 : 0.6,
+      formedAtTick: tick,
+      lastReinforcedTick: tick,
+    });
+
+    events.push({
+      type: "SEMANTIC_FORMED",
+      tick,
+      entityId: entity.id,
+      fact: factType,
+      subject: "shallow_river",
+      position: { ...crossingPosition },
+      confidence: success ? 0.7 : 0.6,
+    } as SimEvent);
+  }
+
+  return events;
+}

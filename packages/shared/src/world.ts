@@ -8,6 +8,93 @@ export type Sex = "male" | "female";
 export type MiracleType = "bless" | "heal" | "rain" | "bounty";
 import { Vec2 } from "./geometry";
 
+// ─── MBTI Personality (Phase 1) ──────────────────────────────
+
+/**
+ * MBTI personality axes. Each is a continuous value from -1.0 to +1.0.
+ *
+ * E/I: Extraversion (+1) vs Introversion (-1)
+ *   → social behavior, group-seeking, trust gain rate
+ *
+ * S/N: Sensing (-1) vs Intuition (+1)
+ *   → exploration, invention chance, curiosity, wander radius
+ *
+ * T/F: Thinking (-1) vs Feeling (+1)
+ *   → empathy, faith affinity, resource sharing
+ *
+ * J/P: Judging (-1) vs Perceiving (+1)
+ *   → planning, stockpiling, build priority, structure preference
+ */
+export interface Personality {
+  /** Extraversion (+1) vs Introversion (-1). */
+  ei: number;
+  /** Intuition (+1) vs Sensing (-1). */
+  sn: number;
+  /** Feeling (+1) vs Thinking (-1). */
+  tf: number;
+  /** Perceiving (+1) vs Judging (-1). */
+  jp: number;
+}
+
+/** Derive MBTI 4-letter code from personality axes. */
+export function getMBTICode(p: Personality): string {
+  return (
+    (p.ei >= 0 ? "E" : "I") +
+    (p.sn >= 0 ? "N" : "S") +
+    (p.tf >= 0 ? "F" : "T") +
+    (p.jp >= 0 ? "P" : "J")
+  );
+}
+
+// ─── Agent Emotion (LLM Cognition) ───────────────────────────
+
+/** Possible emotional states for an agent. Updated by rule system + LLM override. */
+export type EmotionType =
+  | "calm"
+  | "anxious"
+  | "curious"
+  | "content"
+  | "afraid"
+  | "angry"
+  | "grieving"
+  | "hopeful"
+  | "determined";
+
+/** Emoji mapping for emotion display. */
+export const EMOTION_EMOJI: Record<EmotionType, string> = {
+  calm: "😐",
+  anxious: "😰",
+  curious: "🤔",
+  content: "😊",
+  afraid: "😨",
+  angry: "😡",
+  grieving: "😢",
+  hopeful: "🫡",
+  determined: "💪",
+};
+
+// ─── Action Plan (LLM multi-step plan) ───────────────────────
+
+/**
+ * A single planned step output by the LLM cognitive adapter.
+ * The rule engine executes these one by one until the plan is
+ * exhausted, disrupted, or the next cognitive tick reconsiders.
+ */
+export interface ActionPlanStep {
+  /** The action type to execute. */
+  type: string;
+  /** Optional target resource/entity/structure. */
+  targetId?: string;
+  /** Optional position for move/build. */
+  position?: Vec2;
+  /** Optional recipe ID for cook. */
+  recipeId?: string;
+  /** Optional item ID for build. */
+  itemId?: string;
+  /** Human-readable reason for this step. */
+  reason: string;
+}
+
 // ─── Tile ────────────────────────────────────────────────────
 
 export interface TileState {
@@ -78,6 +165,10 @@ export type SemanticFactType =
   | "fire_location"       // "fire pit at (x,y)"
   | "warming_benefit"     // "fire pits provide warmth"
   | "shelter_benefit"     // "lean-to provides shelter from cold"
+  // MVP-03: River crossing knowledge
+  | "far_bank_resource"   // "rich resources across river at (x,y)"
+  | "safe_crossing"       // "shallow crossing at (x,y) — succeeded before"
+  | "dangerous_crossing"  // "crossing at (x,y) — failed/injured"
   ;
 
 /**
@@ -154,6 +245,12 @@ export interface SocialImpression {
   trust: number;
   lastSeenTick: number;
   lastSeenPosition?: Vec2;
+  /** Relationship type: kinship, spouse, friend, rival, stranger. Phase 4. */
+  relationship?: "kin" | "spouse" | "friend" | "rival" | "stranger";
+  /** Total number of direct interactions with this entity. Phase 4. */
+  interactionCount?: number;
+  /** Last conversation topic or social action. Phase 4. */
+  lastTopic?: string;
 }
 
 // ─── Entity (Agent) ──────────────────────────────────────────
@@ -249,6 +346,33 @@ export interface EntityState {
 
   /** How well this entity follows each doctrine (-100 to 100). */
   doctrineAlignment?: Record<string, number>;
+
+  // ── Phase 1: MBTI Personality ──────────────────────────────
+
+  /** Agent's MBTI personality axes. Modulates decision thresholds. */
+  personality?: Personality;
+
+  // ── LLM Cognition: Agent Identity ─────────────────────────
+
+  /** Human-readable name (e.g. "Arak", "Luna"). */
+  name?: string;
+  /** Current emotional state. Updated by rule system + LLM. */
+  emotion?: EmotionType;
+  /** Last LLM-generated inner thought (visible to player). */
+  innerThought?: string;
+  /** Current personal goal (set by LLM reflection). */
+  personalGoal?: string;
+  /** Multi-step action plan from LLM. Executed one step per tick. */
+  actionPlan?: ActionPlanStep[];
+  /** Tick when LLM last ran cognition for this agent. */
+  lastCognitiveTick?: number;
+
+  // ── Phase 5: World Arbiter ─────────────────────────────────
+
+  /** Most recent arbiter judgment (for UI display). */
+  lastArbiterJudgment?: import("./arbiter").ArbiterJudgment;
+  /** Per-action attempt counters. key = action type, value = {attempts, successes}. */
+  actionAttempts?: Record<string, { attempts: number; successes: number }>;
 }
 
 // ─── Tribe State (MVP-02-E: group-level data) ────────────────
@@ -271,7 +395,19 @@ export interface TribeState {
   // ── MVP-07B: Doctrines ─────────────────────────────────────
 
   /** Active doctrines held by this tribe. */
+  /** Active doctrines held by this tribe. */
   doctrines?: DoctrineEntry[];
+
+  // ── Phase 4: Social Dynamics ────────────────────────────────
+
+  /** Elected leader entity ID (highest trust / eldest elder). */
+  leaderId?: EntityId;
+  /** Current group tension level 0-100. High = conflict risk. */
+  tension?: number;
+  /** Average tribe hunger (0-100). Updated each tick. */
+  avgHunger?: number;
+  /** Average tribe thirst (0-100). Updated each tick. */
+  avgThirst?: number;
 }
 
 // ─── Doctrine (MVP-07B: tribal beliefs and taboos) ───────────
@@ -295,15 +431,17 @@ export interface DoctrineEntry {
 
 // ─── Environment State (MVP-03-A: temperature + day/night) ───
 
-export type TimeOfDay = "day" | "dusk" | "night";
+export type TimeOfDay = "dawn" | "day" | "dusk" | "night";
 
 export interface EnvironmentState {
   /** Current world temperature 0-100 (50 = comfortable, <40 = cold). */
   temperature: number;
-  /** Whether it is currently day or night. */
+  /** Current phase of the day/night cycle. */
   timeOfDay: TimeOfDay;
   /** Total ticks per full day+night cycle. */
   readonly dayLength: number;
+  /** Continuous light level 0.0 (pitch black) to 1.0 (full sun). */
+  lightLevel: number;
 }
 
 // ─── World State ─────────────────────────────────────────────
@@ -336,4 +474,10 @@ export interface WorldState {
   divinePoints?: number;
   /** Maximum divine points cap. */
   maxDivinePoints?: number;
+
+  // ── Fog of War ─────────────────────────────────────────────
+
+  /** Tracks which tiles have ever been seen by any agent.
+   *  Key = tileKey "x,y", value = true if explored. */
+  exploredTiles?: Record<string, boolean>;
 }

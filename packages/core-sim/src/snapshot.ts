@@ -5,7 +5,7 @@
 
 import {
   WorldState, EntityState, ResourceNodeState, StructureState, TribeState, EnvironmentState,
-  SimEvent, ActionIntent, LifeStage,
+  SimEvent, ActionIntent, LifeStage, getMBTICode, EMOTION_EMOJI, EmotionType,
   DebugProjection, DebugAgentView, DebugResourceView, DebugStructureView, DebugTribeView, DebugEnvironmentView,
   TickResult,
 } from "@project-god/shared";
@@ -73,6 +73,16 @@ export function buildProjection(
       knownRecipes: { ...(entity.knownRecipes ?? {}) },
       preferences: { ...(entity.preferences ?? {}) },
       homeStructureId: entity.homeStructureId ?? undefined,
+      // Phase 1: MBTI personality
+      mbtiCode: entity.personality ? getMBTICode(entity.personality) : "----",
+      personality: entity.personality ? { ...entity.personality } : undefined,
+      // LLM Cognition: Agent identity
+      name: entity.name ?? entity.id,
+      emotion: entity.emotion ?? "calm",
+      emotionEmoji: EMOTION_EMOJI[(entity.emotion ?? "calm") as EmotionType] ?? "😐",
+      innerThought: entity.innerThought ?? "",
+      personalGoal: entity.personalGoal ?? "survive",
+      planStepsRemaining: entity.actionPlan?.length ?? 0,
       lastAction,
       lastActionResult,
       lastActionReason,
@@ -163,6 +173,7 @@ export function buildProjection(
       temperature: Math.round(world.environment.temperature * 10) / 10,
       timeOfDay: world.environment.timeOfDay,
       dayLength: world.environment.dayLength,
+      lightLevel: Math.round(world.environment.lightLevel * 100) / 100,
     };
   }
 

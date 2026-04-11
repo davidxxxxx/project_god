@@ -16,5 +16,64 @@
     "requiredSkill": null,
     "skillGainOnCraft": 0,
     "description": "Purified water — prevents future illness."
+  },
+
+  "cooked_fish": {
+    "displayName": "Cooked Fish",
+    "inputs": { "fish": 1 },
+    "outputs": { "cooked_fish": 1 },
+    "requiresNearby": "fire_pit",
+    "requiredSkill": "cooking",
+    "skillGainOnCraft": 0.05,
+    "description": "Grilled fish. Rich protein source."
+  },
+  "cooked_meat": {
+    "displayName": "Cooked Meat",
+    "inputs": { "meat": 1 },
+    "outputs": { "cooked_meat": 1 },
+    "requiresNearby": "fire_pit",
+    "requiredSkill": "cooking",
+    "skillGainOnCraft": 0.05,
+    "description": "Roasted meat. Most nutritious food available."
+  },
+  "smoked_meat": {
+    "displayName": "Smoked Meat",
+    "inputs": { "meat": 2 },
+    "outputs": { "smoked_meat": 2 },
+    "requiresNearby": "smoker",
+    "requiredSkill": "cooking",
+    "requiredTech": "food_preservation",
+    "skillGainOnCraft": 0.08,
+    "description": "Preserved meat that never spoils. Excellent for long journeys."
+  },
+  "dried_berry": {
+    "displayName": "Dried Berry",
+    "inputs": { "berry": 3 },
+    "outputs": { "dried_berry": 2 },
+    "requiresNearby": "smoker",
+    "requiredSkill": null,
+    "requiredTech": "food_preservation",
+    "skillGainOnCraft": 0,
+    "description": "Dried berries. Compact, portable, never spoils."
+  },
+  "stone_knife": {
+    "displayName": "Stone Knife",
+    "inputs": { "stone": 2 },
+    "outputs": { "stone_tool": 1 },
+    "requiresNearby": null,
+    "requiredSkill": "tool_making",
+    "requiredTech": "stone_tools",
+    "skillGainOnCraft": 0.1,
+    "description": "A sharp stone blade. Essential for harvesting and construction."
+  },
+  "clay_pot": {
+    "displayName": "Clay Pot",
+    "inputs": { "clay": 3 },
+    "outputs": { "clay_pot": 1 },
+    "requiresNearby": "fire_pit",
+    "requiredSkill": "pottery_skill",
+    "requiredTech": "pottery",
+    "skillGainOnCraft": 0.1,
+    "description": "Fired clay vessel for storage and cooking."
   }
 }

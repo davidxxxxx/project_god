@@ -51,6 +51,7 @@
     "category": "material",
     "harvestAction": "harvest"
   },
+
   "roast_berry": {
     "displayName": "Roast Berry",
     "gatherAmount": 0,
@@ -66,5 +67,88 @@
     "maxQuantity": 0,
     "regenPerTick": 0,
     "category": "drink"
+  },
+
+  "fish": {
+    "displayName": "Fresh Fish",
+    "gatherAmount": 1,
+    "restoresNeed": { "hunger": 30 },
+    "maxQuantity": 0,
+    "regenPerTick": 0,
+    "category": "food",
+    "spoilRate": 0.05,
+    "_doc": "Obtained via fish action at water. Spoils if not cooked."
+  },
+  "meat": {
+    "displayName": "Raw Meat",
+    "gatherAmount": 1,
+    "restoresNeed": { "hunger": 25 },
+    "maxQuantity": 0,
+    "regenPerTick": 0,
+    "category": "food",
+    "spoilRate": 0.08,
+    "_doc": "Obtained via hunt action. Should be cooked or smoked."
+  },
+  "clay": {
+    "displayName": "River Clay",
+    "gatherAmount": 1,
+    "restoresNeed": {},
+    "maxQuantity": 6,
+    "regenPerTick": 0,
+    "category": "material",
+    "harvestAction": "harvest",
+    "_doc": "Found near rivers. Used for pottery."
+  },
+  "cooked_fish": {
+    "displayName": "Cooked Fish",
+    "gatherAmount": 0,
+    "restoresNeed": { "hunger": 50 },
+    "maxQuantity": 0,
+    "regenPerTick": 0,
+    "category": "food"
+  },
+  "cooked_meat": {
+    "displayName": "Cooked Meat",
+    "gatherAmount": 0,
+    "restoresNeed": { "hunger": 55 },
+    "maxQuantity": 0,
+    "regenPerTick": 0,
+    "category": "food"
+  },
+  "smoked_meat": {
+    "displayName": "Smoked Meat",
+    "gatherAmount": 0,
+    "restoresNeed": { "hunger": 45 },
+    "maxQuantity": 0,
+    "regenPerTick": 0,
+    "category": "food",
+    "_doc": "Preserved food. Does not spoil."
+  },
+  "dried_berry": {
+    "displayName": "Dried Berry",
+    "gatherAmount": 0,
+    "restoresNeed": { "hunger": 25 },
+    "maxQuantity": 0,
+    "regenPerTick": 0,
+    "category": "food",
+    "_doc": "Preserved food. Does not spoil."
+  },
+  "stone_tool": {
+    "displayName": "Stone Tool",
+    "gatherAmount": 0,
+    "restoresNeed": {},
+    "maxQuantity": 0,
+    "regenPerTick": 0,
+    "category": "tool",
+    "_doc": "Crafted from stone. Improves gather/harvest efficiency."
+  },
+  "clay_pot": {
+    "displayName": "Clay Pot",
+    "gatherAmount": 0,
+    "restoresNeed": {},
+    "maxQuantity": 0,
+    "regenPerTick": 0,
+    "category": "tool",
+    "_doc": "Crafted from clay. Used for storage and cooking."
   }
 }

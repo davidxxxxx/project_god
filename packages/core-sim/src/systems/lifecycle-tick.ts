@@ -12,11 +12,12 @@
  */
 
 import {
-  WorldState, EntityState, SimEvent, LifeStage, Sex,
+  WorldState, EntityState, SimEvent, LifeStage, Sex, Personality, EmotionType,
   EntityId, TribeId, Vec2, manhattan, createRNG,
   EntityAgedEvent, PairBondedEvent, EntityBornEvent, EntityDiedEvent,
 } from "@project-god/shared";
 import type { LifecycleDef } from "../content-types";
+import namePool from "../../../content-data/data/names.json";
 
 // ── Life Stage helpers ────────────────────────────────────────
 
@@ -202,6 +203,27 @@ function tickBirth(world: WorldState, cfg: LifecycleDef): SimEvent[] {
 
     const avgFaith = ((mother.attributes.faith ?? 0) + (father.attributes.faith ?? 0)) / 2;
 
+    // Phase 1: Inherit personality from parents (70% blend + 30% mutation)
+    const PARENT_BLEND = 0.7;
+    function blendAxis(m: number, f: number): number {
+      const parentAvg = (m + f) / 2;
+      const mutation = rng.next() * 2 - 1; // [-1, 1]
+      const raw = PARENT_BLEND * parentAvg + (1 - PARENT_BLEND) * mutation;
+      return Math.max(-1, Math.min(1, raw));
+    }
+    const motherP = mother.personality ?? { ei: 0, sn: 0, tf: 0, jp: 0 };
+    const fatherP = father.personality ?? { ei: 0, sn: 0, tf: 0, jp: 0 };
+    const childPersonality: Personality = {
+      ei: blendAxis(motherP.ei, fatherP.ei),
+      sn: blendAxis(motherP.sn, fatherP.sn),
+      tf: blendAxis(motherP.tf, fatherP.tf),
+      jp: blendAxis(motherP.jp, fatherP.jp),
+    };
+
+    // LLM Cognition: Assign name from pool
+    const childNameList = childSex === "male" ? namePool.male : namePool.female;
+    const childName = childNameList[rng.nextInt(0, childNameList.length - 1)];
+
     const childEntity: EntityState = {
       id: childId,
       type: "human",
@@ -222,6 +244,12 @@ function tickBirth(world: WorldState, cfg: LifecycleDef): SimEvent[] {
       parentIds: [mother.id, father.id],
       childIds: [],
       statuses: ["child"],
+      personality: childPersonality,
+      // LLM Cognition: Agent identity
+      name: childName,
+      emotion: "calm" as EmotionType,
+      innerThought: "",
+      personalGoal: "follow parents",
     };
 
     world.entities[childId] = childEntity;

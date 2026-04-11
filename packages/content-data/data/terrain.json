@@ -28,5 +28,23 @@
     "moveCostMultiplier": 3.0,
     "passable": true,
     "fertility": 0.1
+  },
+  "shallow_river": {
+    "displayName": "Shallow Water",
+    "moveCostMultiplier": 4.0,
+    "passable": true,
+    "fertility": 0
+  },
+  "riverbank": {
+    "displayName": "Riverbank",
+    "moveCostMultiplier": 1.2,
+    "passable": true,
+    "fertility": 0.2
+  },
+  "river": {
+    "displayName": "Deep River",
+    "moveCostMultiplier": 99,
+    "passable": false,
+    "fertility": 0
   }
 }

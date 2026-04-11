@@ -10,7 +10,7 @@ export { decayNeeds, checkDeaths } from "./systems/decay-needs";
 export type { NeedDef, ResourceDef, ActionDef, TerrainDef, StructureDef, SkillDef, TechnologyDef, FaithDef } from "./content-types";
 export { tickFaith, performMiracle } from "./systems/faith-tick";
 export type { MiracleRequest, MiracleType } from "./systems/faith-tick";
-export { ScenarioRunner, defaultSurvivalDecision, defaultMemoryDecision, defaultPostTickMemoryHook } from "./scenario-runner";
+export { ScenarioRunner, defaultSurvivalDecision, defaultMemoryDecision, defaultCognitiveDecision, defaultPostTickMemoryHook } from "./scenario-runner";
 export type { ScenarioConfig, DecisionFn, PostTickHook } from "./scenario-runner";
 export { buildProjection } from "./snapshot";
 export { buildTickMetrics, aggregateMetrics } from "./metrics";
@@ -22,3 +22,6 @@ export { saveWorld, loadWorld, saveToString, loadFromString, SAVE_VERSION, SaveL
 export { tickDoctrine } from "./systems/doctrine-tick";
 export { parseDivineIntent, applyDoctrineShift } from "./systems/divine-intent";
 export type { DivineIntent } from "./systems/divine-intent";
+export { computeFogOfWar } from "./systems/fog-of-war";
+export type { FogState } from "./systems/fog-of-war";
+export { VISION_RADIUS, getVisionRadius, calculateLightLevel } from "./systems/environment-tick";

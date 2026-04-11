@@ -10,7 +10,7 @@
 
 import "./styles.css";
 import {
-  ScenarioRunner, defaultMemoryDecision, defaultPostTickMemoryHook,
+  ScenarioRunner, defaultCognitiveDecision, defaultPostTickMemoryHook,
 } from "@project-god/core-sim";
 import type { MiracleRequest, MiracleType } from "@project-god/core-sim";
 import { parseDivineIntent, applyDoctrineShift } from "@project-god/core-sim";
@@ -27,6 +27,7 @@ import { TimeController } from "./TimeController";
 import { AutoTimePolicy } from "./AutoTimePolicy";
 import { NarrativeEngine, DEFAULT_LLM_CONFIG } from "@project-god/narrative-runtime";
 import type { NarrativeEntry } from "@project-god/narrative-runtime";
+import { setCognitiveConfig, setArbiterConfig } from "@project-god/agent-runtime";
 
 // ── State ───────────────────────────────────────────────
 
@@ -47,7 +48,7 @@ async function init() {
     id: "golden-scenario-001",
     worldConfig: GOLDEN_WORLD_CONFIG,
     tickContext: GOLDEN_TICK_CONTEXT,
-    decideFn: defaultMemoryDecision(GOLDEN_NEEDS_CONFIG, GOLDEN_TICK_CONTEXT.terrain),
+    decideFn: defaultCognitiveDecision(GOLDEN_NEEDS_CONFIG, GOLDEN_TICK_CONTEXT.terrain),
     postTickHook: defaultPostTickMemoryHook(),
   });
 
@@ -80,6 +81,36 @@ async function init() {
     render();
   };
 
+  // Initialize LLM Cognitive Adapter for agent decision-making
+  const apiKey = import.meta.env.VITE_MINIMAX_API_KEY ?? "";
+  setCognitiveConfig({
+    endpoint: "https://api.minimaxi.com/v1/text/chatcompletion_v2",
+    apiKey,
+    model: "MiniMax-M2.7",
+    enabled: apiKey.length > 0,
+    cognitivePeriod: 30,
+    maxTokens: 1024,
+    temperature: 0.7,
+  });
+  if (apiKey.length > 0) {
+    console.log("[Cognitive] LLM agent cognition ENABLED (period=30 ticks)");
+  } else {
+    console.log("[Cognitive] LLM agent cognition DISABLED (no API key)");
+  }
+
+  // Initialize World Arbiter (Phase 5) — same API key, lower temp for consistent judgments
+  setArbiterConfig({
+    endpoint: "https://api.minimaxi.com/v1/text/chatcompletion_v2",
+    apiKey,
+    model: "MiniMax-M2.7",
+    enabled: apiKey.length > 0,
+    maxTokens: 512,
+    temperature: 0.4,
+  });
+  if (apiKey.length > 0) {
+    console.log("[WorldArbiter] LLM arbiter ENABLED");
+  }
+
   buildEventFilters();
   bindControls();
   bindTabs();
@@ -104,6 +135,8 @@ const EVENT_TYPES = [
   "MIRACLE_PERFORMED", "FAITH_CHANGED", "HOME_CLAIMED", "RECIPE_LEARNED",
   "RESOURCE_PLANTED",
   "CHILD_FED",
+  // MVP-03: River crossing
+  "WADE_ATTEMPTED", "FAR_BANK_SPOTTED",
 ];
 
 function buildEventFilters() {
@@ -219,7 +252,7 @@ function render() {
 
   renderTopBar(proj);
   renderAgentList(proj);
-  worldRenderer.update(proj, selectedAgentId);
+  worldRenderer.update(proj, selectedAgentId, runner.getFogRenderData());
   renderEventLog(proj);
   renderChronicle();
   renderNarrativeToast();
@@ -316,6 +349,11 @@ function renderAgentList(proj: DebugProjection) {
     const spouseBadge = agent.spouseId ? `<span class="spouse-badge" title="married to ${agent.spouseId}">💍</span>` : "";
     const prayerBadge = agent.isPraying ? `<span class="prayer-badge" title="praying">🙏</span>` : "";
     const faithBadge = agent.faith > 0 ? `<span class="life-badge" style="color:#fbbf24" title="faith: ${agent.faith}">✨${agent.faith}</span>` : "";
+    // Phase 1: MBTI personality badge
+    const mbtiTooltip = agent.personality
+      ? `E/I:${agent.personality.ei.toFixed(2)} S/N:${agent.personality.sn.toFixed(2)} T/F:${agent.personality.tf.toFixed(2)} J/P:${agent.personality.jp.toFixed(2)}`
+      : "";
+    const mbtiBadge = `<span class="life-badge" style="color:#67e8f9;font-weight:bold" title="${mbtiTooltip}">${agent.mbtiCode}</span>`;
     const priestBadge = agent.role === "priest" ? `<span class="life-badge" style="color:#a78bfa" title="Priest">⛩️</span>` : "";
 
     // MVP-02X: Thirst/Exposure are hidden backend states — show as compact status icons
@@ -325,7 +363,8 @@ function renderAgentList(proj: DebugProjection) {
     const exposureIcon = exposureVal <= 30 ? '🔴' : exposureVal <= 60 ? '🟡' : '🟢';
 
     card.innerHTML = `
-      <div class="agent-name">${dot}${agent.id} ${lifeBadge}${spouseBadge}${prayerBadge}${priestBadge}${skillBadges ? ` ${skillBadges}` : ""}${socialBadge ? ` ${socialBadge}` : ""}${knowledgeBadge ? ` ${knowledgeBadge}` : ""}${statusBadges ? ` ${statusBadges}` : ""}</div>
+      <div class="agent-name">${dot}${agent.emotionEmoji} <strong>${agent.name}</strong> ${lifeBadge}${mbtiBadge}${spouseBadge}${prayerBadge}${priestBadge}${skillBadges ? ` ${skillBadges}` : ""}${socialBadge ? ` ${socialBadge}` : ""}${knowledgeBadge ? ` ${knowledgeBadge}` : ""}${statusBadges ? ` ${statusBadges}` : ""}</div>
+      <div style="font-size:9px;color:#94a3b8;margin:2px 0 1px 16px;font-style:italic;max-height:26px;overflow:hidden">${agent.innerThought ? `"${agent.innerThought}"` : `<span style="color:#475569">Goal: ${agent.personalGoal}</span>`}</div>
       <div class="need-bar-container">
         <div class="need-bar-label"><span>HP</span><span>${Math.round(agent.needs.hp ?? 100)}</span></div>
         <div class="need-bar"><div class="need-bar-fill hp${(agent.needs.hp ?? 100) <= 30 ? " critical" : ""}" style="width:${agent.needs.hp ?? 100}%"></div></div>
@@ -338,7 +377,7 @@ function renderAgentList(proj: DebugProjection) {
         <div class="need-bar-label"><span>Faith</span><span>${agent.faith}</span></div>
         <div class="need-bar"><div class="need-bar-fill faith" style="width:${agent.faith}%"></div></div>
       </div>
-      <div style="font-size:9px;color:var(--text-2);margin-top:3px" title="Thirst: ${thirstVal} | Exposure: ${exposureVal}">💧${thirstIcon}${thirstVal} 🌡️${exposureIcon}${exposureVal} | 📦 ${inv}</div>
+      <div style="font-size:9px;color:var(--text-2);margin-top:3px" title="Thirst: ${thirstVal} | Exposure: ${exposureVal}">💧${thirstIcon}${thirstVal} 🌡️${exposureIcon}${exposureVal} | 📦 ${inv}${agent.planStepsRemaining > 0 ? ` | 📝${agent.planStepsRemaining} steps` : ""}</div>
     `;
     container.appendChild(card);
   }
@@ -414,6 +453,9 @@ function formatEvent(ev: SimEvent): string {
     case "RECIPE_LEARNED": return `📗 ${e.entityId} learned recipe: ${e.recipeId} (${e.source}${e.observedFrom ? ` from ${e.observedFrom}` : ''})`;
     case "RESOURCE_PLANTED": return `🌱 ${e.entityId} planted ${e.resourceType} at (${e.position?.x},${e.position?.y})`;
     case "CHILD_FED": return `🍼 ${e.entityId} fed child ${e.childId}`;
+    // MVP-03: River crossing events
+    case "WADE_ATTEMPTED": return `🌊 ${e.entityId} ${e.success ? '✅ waded across' : '❌ failed to wade'} (${Math.round(e.successChance * 100)}% chance)${e.hpLost ? ` lost ${e.hpLost} HP` : ''}${e.itemLost ? `, dropped ${e.itemLost}` : ''}`;
+    case "FAR_BANK_SPOTTED": return `👁️ ${e.entityId} spotted ${e.resourceType} across river at (${e.position?.x},${e.position?.y})`;
     default: return "";
   }
 }
@@ -448,9 +490,9 @@ function renderBottomBar(proj: DebugProjection) {
   // Environment (MVP-03-A)
   const env = proj.environment;
   if (env) {
-    const icon = env.timeOfDay === "day" ? "🌞" : env.timeOfDay === "dusk" ? "🌅" : "🌙";
+    const icon = env.timeOfDay === "dawn" ? "🌄" : env.timeOfDay === "day" ? "🌞" : env.timeOfDay === "dusk" ? "🌅" : "🌙";
     const tempColor = env.temperature < 40 ? "🥶" : env.temperature < 50 ? "😐" : "☀️";
-    const todLabel = env.timeOfDay === "day" ? "Day" : env.timeOfDay === "dusk" ? "Dusk" : "Night";
+    const todLabel = env.timeOfDay === "dawn" ? "Dawn" : env.timeOfDay === "day" ? "Day" : env.timeOfDay === "dusk" ? "Dusk" : "Night";
     document.getElementById("metric-environment")!.textContent = `${icon} ${todLabel} | ${tempColor} ${env.temperature.toFixed(0)}°`;
     // Night-mode class on map container
     // Night mode is now handled by PixiJS OverlayLayer
@@ -506,7 +548,9 @@ function renderBottomBar(proj: DebugProjection) {
       const homeLabel = agent.homeStructureId ? `🏠 ${agent.homeStructureId}` : "🏕️ no home";
 
       detailEl.innerHTML = `
-        <strong>${agent.id}</strong> ${sexIcon} age ${agent.age} (${agent.lifeStage})
+        <strong>${agent.emotionEmoji} ${agent.name}</strong> (${agent.id}) ${sexIcon} age ${agent.age} (${agent.lifeStage})
+        &nbsp;|&nbsp; <span style="color:#67e8f9;font-weight:bold">${agent.mbtiCode}</span>
+        &nbsp;|&nbsp; ${agent.emotion}
         &nbsp;|&nbsp; Tribe: ${agent.tribeId}
         &nbsp;|&nbsp; Pos: (${agent.position.x},${agent.position.y})
         &nbsp;|&nbsp; HP:${Math.round(agent.needs.hp ?? 100)} H:${Math.round(agent.needs.hunger ?? 0)} T:${Math.round(agent.needs.thirst ?? 0)} E:${Math.round(agent.needs.exposure ?? 100)}

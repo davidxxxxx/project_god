@@ -72,10 +72,10 @@ export class TimeController {
     }
   }
 
-  /** Advance exactly 1 tick. Works in any mode. */
-  step(): void {
+  /** Advance exactly 1 tick (manual step). Works in any mode. */
+  async step(): Promise<void> {
     const wasPaused = this.mode === "paused";
-    const result = this.runner.step();
+    const { result } = await this.runner.stepWithCognition();
     this.checkInterruption(result);
     this.onRender();
     if (!wasPaused && this.mode === "playing") {
@@ -85,7 +85,7 @@ export class TimeController {
 
   /**
    * Fast-forward until target event or maxTicks (2000).
-   * Runs synchronously, then pauses and renders final state.
+   * Runs synchronously (uses sync step, no LLM), then pauses and renders final state.
    */
   fastForward(target: FastForwardTarget): void {
     const targetEvents = FF_TARGET_EVENTS[target];
@@ -152,7 +152,14 @@ export class TimeController {
     }
   }
 
-  private loop(timestamp: number): void {
+  /**
+   * Main game loop — async to support cognitive pauses.
+   *
+   * When an LLM cognitive phase triggers (every ~30 ticks), the loop
+   * awaits all concurrent API calls before advancing the tick.
+   * This prevents tick drift and ensures plans are fresh.
+   */
+  private async loop(timestamp: number): Promise<void> {
     this.rafId = null;
     if (this.mode !== "playing") return;
 
@@ -172,7 +179,8 @@ export class TimeController {
 
       // Run N ticks, checking policy after each
       for (let i = 0; i < ticksThisFrame; i++) {
-        const result = this.runner.step();
+        // Use async step with cognitive pause
+        const { result } = await this.runner.stepWithCognition();
         const interruption = this.checkInterruption(result);
 
         if (interruption) {
@@ -187,6 +195,9 @@ export class TimeController {
             // Continue this frame but at reduced speed next frame
           }
         }
+
+        // If we were paused externally during the await, stop
+        if (this.mode !== "playing") return;
       }
 
       this.onRender();

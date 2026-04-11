@@ -9,6 +9,8 @@ const TERRAIN = {
   // MVP-02Y: River terrain
   river: { displayName: "River", moveCostMultiplier: 99, passable: false, fertility: 0 },
   riverbank: { displayName: "Riverbank", moveCostMultiplier: 1.3, passable: true, fertility: 0.7 },
+  // MVP-03: Shallow river — passable but slow and risky
+  shallow_river: { displayName: "Shallow Water", moveCostMultiplier: 4.0, passable: true, fertility: 0 },
 };
 
 const NEEDS = {
@@ -39,6 +41,7 @@ const ACTIONS = {
   build: { range: 0 }, drop: { range: 0 }, pray: { range: 0 },
   perform_ritual: { range: 1 }, participate_ritual: { range: 3 },
   plant: { range: 0 }, // MVP-02Y: Plant berry bush
+  wade: { range: 1 },  // MVP-03: Attempt river crossing
 };
 
 const STRUCTURES = {
@@ -114,6 +117,8 @@ const SKILLS = {
   cooking: { displayName: "Cooking", learnMethod: "observation" as const, learnTicks: 3, initialProficiency: 0.5, maxProficiency: 1.0 },
   shelter_building: { displayName: "Shelter Building", learnMethod: "observation" as const, learnTicks: 5, initialProficiency: 0.5, maxProficiency: 1.0 },
   planting: { displayName: "Planting", learnMethod: "discovery" as const, learnTicks: 10, initialProficiency: 0.3, maxProficiency: 1.0 },
+  // MVP-03: Discovered by surviving a crossing, not observation
+  water_crossing: { displayName: "Water Crossing", learnMethod: "discovery" as const, learnTicks: 1, initialProficiency: 0.3, maxProficiency: 1.0 },
 };
 
 const TECHNOLOGIES = {

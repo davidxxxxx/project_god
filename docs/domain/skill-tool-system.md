@@ -30,6 +30,24 @@ Current skills:
   - learnMethod: observation
   - learnTicks: 5 (ticks of observation near teacher + active structure)
   - initialProficiency: 0.5
+- **cooking** — ability to cook raw food into better meals
+  - learnMethod: observation
+  - learnTicks: 3
+  - initialProficiency: 0.5
+- **shelter_building** — ability to build shelters (lean-to, hut)
+  - learnMethod: observation
+  - learnTicks: 5
+  - initialProficiency: 0.5
+- **planting** — ability to plant berry bushes
+  - learnMethod: discovery
+  - learnTicks: 10
+  - initialProficiency: 0.3
+- **water_crossing** (MVP-03) — ability to safely wade across shallow rivers
+  - learnMethod: discovery (acquired by surviving first wade attempt)
+  - learnTicks: 1 (instant on first success)
+  - initialProficiency: 0.3
+  - Effect: +30% wade success rate at max proficiency
+  - Note: This skill is discovered individually, not by observation. Cultural memory transmits crossing location knowledge, not the skill itself.
 
 ### Tool
 An external object, station, or affordance used to enhance action.

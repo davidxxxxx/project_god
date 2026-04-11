@@ -62,24 +62,40 @@ export interface AgentSnapshot {
   worldTiles?: Record<string, { terrain: string }>;
   /** Terrain defs for cost lookup. MVP-02Y. */
   terrainDefs?: Record<string, { moveCostMultiplier: number; passable: boolean }>;
+  // ── MVP-03: Cross-river awareness ───────────────────────
+  /** Resources visible across the river (within extended perception range). */
+  farBankResources: { resourceType: string; position: Vec2; distance: number }[];
+  /** Nearest shallow river crossing point, if known. */
+  nearestShallowCrossing?: Vec2;
+  // ── Fog of War: Vision radius ───────────────────────────
+  /** Current vision radius (affected by time of day). */
+  visionRadius: number;
 }
 
-/** Default perception radius in manhattan distance. */
-const PERCEPTION_RADIUS = 10;
+/** Vision radius per time-of-day phase. Agent sight range shrinks at night. */
+const VISION_RADIUS_MAP: Record<TimeOfDay, number> = {
+  dawn: 7,
+  day: 10,
+  dusk: 5,
+  night: 4,
+};
 /** Default inventory capacity if not set on entity. */
 const DEFAULT_INVENTORY_CAPACITY = 10;
 
 export function perceive(
   entityId: string,
   world: WorldState,
-  radius: number = PERCEPTION_RADIUS,
+  radius?: number,
   terrainDefs?: Record<string, { moveCostMultiplier: number; passable: boolean }>
 ): AgentSnapshot {
   const self = world.entities[entityId];
+  // Dynamic vision radius based on time of day
+  const timeOfDay: TimeOfDay = world.environment?.timeOfDay ?? "day";
+  const effectiveRadius = radius ?? VISION_RADIUS_MAP[timeOfDay];
 
   // ── Visible resources ─────────────────────────────────────
   const nearbyResources = Object.values(world.resourceNodes).filter(
-    (node: ResourceNodeState) => node.quantity > 0 && manhattan(self.position, node.position) <= radius
+    (node: ResourceNodeState) => node.quantity > 0 && manhattan(self.position, node.position) <= effectiveRadius
   );
 
   // ── Memory-based recall ───────────────────────────────────
@@ -108,7 +124,7 @@ export function perceive(
   // ── Nearby structures ─────────────────────────────────────
   const nearbyActiveStructures = world.structures
     ? (Object.values(world.structures) as StructureState[]).filter(
-        (s) => s.active && manhattan(self.position, s.position) <= radius
+        (s) => s.active && manhattan(self.position, s.position) <= effectiveRadius
       )
     : [];
 
@@ -117,7 +133,7 @@ export function perceive(
   const nearbyEntities: AgentSnapshot["nearbyEntities"] = [];
   for (const other of Object.values(world.entities) as EntityState[]) {
     if (!other.alive || other.id === self.id) continue;
-    if (manhattan(self.position, other.position) > radius) continue;
+    if (manhattan(self.position, other.position) > effectiveRadius) continue;
     nearbyEntities.push({
       entityId: other.id,
       tribeId: other.tribeId,
@@ -166,7 +182,7 @@ export function perceive(
 
   // ── Environment awareness (MVP-03-A) ───────────────────────
   const temperature = world.environment?.temperature ?? 60;
-  const timeOfDay: TimeOfDay = world.environment?.timeOfDay ?? "day";
+  // timeOfDay already computed above for vision radius
   const isCold = temperature < COLD_THRESHOLD;
   const selfExposure = self.needs.exposure ?? 100;
 
@@ -254,6 +270,89 @@ export function perceive(
     }
   }
 
+  // ── MVP-03: Cross-river perception ─────────────────────────
+  // When near riverbank, scan extended range for far-bank resources
+  // and identify shallow crossing points
+  const farBankResources: AgentSnapshot["farBankResources"] = [];
+  let nearestShallowCrossing: Vec2 | undefined;
+
+  const RIVERBANK_PROXIMITY = 5; // scan within 5 tiles for river proximity
+  const FAR_BANK_SCAN_RANGE = effectiveRadius + 5; // extended perception for far-bank scanning
+
+  // Check if agent is near a river by scanning actual world tiles (NOT nearbyTerrain which only covers 2 tiles)
+  let isNearRiver = false;
+  for (let dy = -RIVERBANK_PROXIMITY; dy <= RIVERBANK_PROXIMITY && !isNearRiver; dy++) {
+    for (let dx = -RIVERBANK_PROXIMITY; dx <= RIVERBANK_PROXIMITY && !isNearRiver; dx++) {
+      const sx = self.position.x + dx;
+      const sy = self.position.y + dy;
+      const sKey = `${sx},${sy}`;
+      const sTile = world.tiles[sKey];
+      if (sTile && (sTile.terrain === "riverbank" || sTile.terrain === "shallow_river" || sTile.terrain === "river")) {
+        isNearRiver = true;
+      }
+    }
+  }
+
+  if (isNearRiver) {
+    // Determine which side of the river we're on by checking our X vs river tiles
+    const agentX = self.position.x;
+    let riverMinX = Infinity;
+    // Find the nearest river column
+    for (let dy = -FAR_BANK_SCAN_RANGE; dy <= FAR_BANK_SCAN_RANGE; dy++) {
+      for (let dx = -FAR_BANK_SCAN_RANGE; dx <= FAR_BANK_SCAN_RANGE; dx++) {
+        const sx = agentX + dx;
+        const sy = self.position.y + dy;
+        const sKey = `${sx},${sy}`;
+        const sTile = world.tiles[sKey];
+        if (sTile?.terrain === "river" || sTile?.terrain === "shallow_river") {
+          riverMinX = Math.min(riverMinX, sx);
+        }
+      }
+    }
+
+    // Scan for shallow crossing points
+    for (let dy = -FAR_BANK_SCAN_RANGE; dy <= FAR_BANK_SCAN_RANGE; dy++) {
+      for (let dx = -FAR_BANK_SCAN_RANGE; dx <= FAR_BANK_SCAN_RANGE; dx++) {
+        const sx = agentX + dx;
+        const sy = self.position.y + dy;
+        const dist = Math.abs(dx) + Math.abs(dy);
+        if (dist > FAR_BANK_SCAN_RANGE) continue;
+        const sKey = `${sx},${sy}`;
+        const sTile = world.tiles[sKey];
+        if (sTile?.terrain === "shallow_river") {
+          if (!nearestShallowCrossing || dist < manhattan(self.position, nearestShallowCrossing)) {
+            nearestShallowCrossing = { x: sx, y: sy };
+          }
+        }
+      }
+    }
+
+    // Scan for far-bank resources (on the other side of the river)
+    const isOnLeftBank = agentX < riverMinX;
+    for (const node of Object.values(world.resourceNodes) as ResourceNodeState[]) {
+      if (node.quantity <= 0) continue;
+      const dist = manhattan(self.position, node.position);
+      if (dist > FAR_BANK_SCAN_RANGE) continue;
+      // Only include resources on the OTHER side of the river
+      const nodeOnFarSide = isOnLeftBank
+        ? node.position.x > riverMinX
+        : node.position.x < riverMinX;
+      if (nodeOnFarSide) {
+        // Don't duplicate with nearbyResources
+        const alreadyVisible = nearbyResources.some(
+          (r) => r.position.x === node.position.x && r.position.y === node.position.y
+        );
+        if (!alreadyVisible) {
+          farBankResources.push({
+            resourceType: node.resourceType,
+            position: { ...node.position },
+            distance: dist,
+          });
+        }
+      }
+    }
+  }
+
   return {
     self, nearbyResources, memorizedResourcePositions, nearbyActiveStructures,
     nearbySkilled, selfSkills, nearbyEntities, tribeGatherPoint, sharedResourcePositions,
@@ -264,5 +363,8 @@ export function perceive(
     nearbyTerrain,
     worldTiles: world.tiles as any,
     terrainDefs: terrainDefs as any,
+    farBankResources,
+    nearestShallowCrossing,
+    visionRadius: effectiveRadius,
   };
 }

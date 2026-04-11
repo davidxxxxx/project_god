@@ -52,6 +52,9 @@ Distilled, generalized knowledge formed from repeated episodic experiences. Unli
 | `fire_location` | "Fire pit at (x,y)" | Observed structure |
 | `warming_benefit` | "Fire pits provide warmth" | Entity has `warming` status |
 | `shelter_benefit` | "Lean-to shelters from cold" | Entity has `sheltered` status |
+| `far_bank_resource` | "Rich berries across river at (x,y)" | ≥3 `spotted_far_resource` episodes (MVP-03) |
+| `safe_crossing` | "Shallow crossing at (x,y) — succeeded" | Successful `wade` action (MVP-03) |
+| `dangerous_crossing` | "Crossing at (x,y) — failed/injured" | Failed `wade` action (MVP-03) |
 
 ### Distillation Rules
 - **Resource locations**: ≥ `DISTILL_THRESHOLD` (3) same-position `found_resource` entries → semantic fact with confidence 0.8
@@ -70,6 +73,7 @@ Semantic memory slots in between visible resources and episodic recall:
 4. Shared episodic memory (from nearby tribe members)
 5. Cultural memory (tribe-level knowledge)
 6. Social behavior (gather point, follow)
+6.5. **Far-bank exploration** (MVP-03): scarcity + far-bank awareness → wade attempt
 7. Wander / idle
 ```
 
@@ -145,6 +149,8 @@ Tick Events
   → decaySemanticMemory()            → prune low-confidence   (MVP-03-B)
   → teachToCulturalMemory()          → tribe.culturalMemory   (MVP-03-B)
   → inheritFromCulturalMemory()      → entity.semanticMemory  (MVP-03-B)
+  → recordFarBankSighting()          → entity.episodic/semantic (MVP-03)
+  → recordCrossingExperience()       → entity.semanticMemory  (MVP-03)
   → decayCulturalMemory()            → prune tribe knowledge  (MVP-03-B)
 ```
 
