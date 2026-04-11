@@ -119,6 +119,7 @@ function translatePlanStep(
     position: step.position,
     recipeId: step.recipeId,
     itemId: step.itemId,
+    description: step.description, // For 'invent' actions
     reason: `🧠 ${step.reason}`,
   };
 }

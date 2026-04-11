@@ -77,7 +77,9 @@ export type SimEventType =
   | "TRADE_COMPLETED"
   | "ITEM_CRAFTED"
   | "AREA_SCOUTED"
-  | "EXPERIMENT_ATTEMPTED";
+  | "EXPERIMENT_ATTEMPTED"
+  // Phase 4: Emergent Invention
+  | "INVENTION_CREATED";
 
 // ─── Per-Type Payloads ───────────────────────────────────────
 
@@ -601,7 +603,8 @@ export interface FarBankSpottedEvent {
  */
 export interface GenericGameEvent {
   readonly type: "SOCIAL_INTERACTION" | "ITEM_GIFTED" | "TRADE_COMPLETED"
-    | "ITEM_CRAFTED" | "AREA_SCOUTED" | "EXPERIMENT_ATTEMPTED";
+    | "ITEM_CRAFTED" | "AREA_SCOUTED" | "EXPERIMENT_ATTEMPTED"
+    | "INVENTION_CREATED" | "SKILL_LEARNED";
   readonly tick: number;
   readonly entityId: EntityId;
   readonly message: string;

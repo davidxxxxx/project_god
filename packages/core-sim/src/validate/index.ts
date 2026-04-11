@@ -194,6 +194,22 @@ export function validateAction(
       return { kind: "validated", intent, energyCost: 2, timeCost: 3 };
     }
 
+    // ── Phase 4: Emergent Invention ─────────────────────────────
+
+    case "invent": {
+      // Must have a description (what are they trying to invent?)
+      if (!intent.description || intent.description.length === 0) {
+        return { kind: "rejected", intent, reason: "need a description of what to invent" };
+      }
+      // Must have at least 1 item to work with
+      const inventor = world.entities[intent.actorId];
+      const invItemCount = Object.entries(inventor.inventory).filter(([_, v]) => v > 0).length;
+      if (invItemCount < 1) {
+        return { kind: "rejected", intent, reason: "need materials to invent something" };
+      }
+      return { kind: "validated", intent, energyCost: 3, timeCost: 4 };
+    }
+
     default:
       return { kind: "rejected", intent, reason: `Action '${intent.type}' not implemented` };
   }

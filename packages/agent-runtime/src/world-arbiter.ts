@@ -17,7 +17,7 @@
  */
 
 import type { EntityState } from "@project-god/shared";
-import type { ArbiterJudgment, ArbitrableAction } from "@project-god/shared";
+import type { ArbiterJudgment, ArbitrableAction, InventionDef } from "@project-god/shared";
 import { deterministicFallback } from "@project-god/shared";
 
 // ── Config ────────────────────────────────────────────────────
@@ -132,6 +132,10 @@ export interface ArbiterActionContext {
   isCold?: boolean;
   /** Available recipe/tech IDs for discovery (experiment). */
   undiscoveredRecipes?: string[];
+  /** Free-form description of the invention proposal (invent action). */
+  inventionDescription?: string;
+  /** Already invented IDs (to prevent duplicates). */
+  existingInventions?: string[];
 }
 
 // ── LLM Call ──────────────────────────────────────────────────
@@ -213,6 +217,15 @@ Rules:
 7. Narrative should be dramatic and specific — describe textures, sounds, the moment of success or failure.
 8. Lessons should be practical knowledge the agent remembers.
 
+For INVENT actions:
+9. The agent proposes a novel technique/tool. Judge whether it is PHYSICALLY PLAUSIBLE in the Stone Age.
+10. The agent MUST have the required materials in their inventory.
+11. The invention MUST NOT violate basic physics (no gunpowder, no metal smelting, no magic).
+12. Valid inventions: woven baskets, fish traps, simple snares, tools from bone/stone/wood, fire techniques, food preservation, simple shelters, clay containers, cordage.
+13. If approved, define the invention as a recipe with clear inputs and outputs.
+14. Outputs must be reasonable: a vine fish net might catch 1-2 fish, not 100.
+15. Use snake_case for invention IDs (e.g. vine_fish_trap, bark_water_container).
+
 You MUST respond with ONLY valid JSON and nothing else.`;
 
 function buildArbiterPrompt(
@@ -247,6 +260,10 @@ function buildArbiterPrompt(
       break;
     case "experiment":
       actionDetail = `Experimenting with items in inventory. Undiscovered recipes: ${ctx.undiscoveredRecipes?.join(", ") ?? "unknown"}`;
+      break;
+    case "invent":
+      actionDetail = `INVENTION PROPOSAL: "${ctx.inventionDescription ?? "unknown idea"}"
+Already invented: ${ctx.existingInventions?.join(", ") || "nothing yet"}`;
       break;
     case "fish":
       actionDetail = `Fishing in nearby water`;
@@ -283,7 +300,16 @@ Respond with ONLY JSON:
   "discoveryId": "recipe_id_string_or_null",
   "qualityModifier": 0.5-1.5,
   "narrative": "2 sentences: dramatic description with sensory details",
-  "lessonLearned": "1 sentence: what the agent remembers from this"
+  "lessonLearned": "1 sentence: what the agent remembers from this"${actionType === "invent" ? `,
+  "inventionDef": {
+    "id": "snake_case_id",
+    "name": "Human Readable Name",
+    "description": "what it does",
+    "inputs": {"material1": count, "material2": count},
+    "outputs": {"product1": count},
+    "requiredSkill": "skill_name_or_null",
+    "skillGainType": "skill_that_improves"
+  }` : ""}
 }`;
 }
 
@@ -311,6 +337,7 @@ function parseArbiterResponse(content: string, actionType: ArbitrableAction): Ar
       lessonLearned: typeof parsed.lessonLearned === "string"
         ? parsed.lessonLearned
         : "Experience was gained.",
+      inventionDef: parseInventionDef(parsed.inventionDef),
     };
   } catch {
     console.warn("[WorldArbiter] Failed to parse JSON response, using fallback");
@@ -345,6 +372,14 @@ function getRelevantSkillLevel(
       return entity.skills["fishing"] ?? 0;
     case "build":
       return entity.skills["building"] ?? entity.skills["masonry_skill"] ?? 0;
+    case "invent":
+      // Invention uses the highest of any creative skill
+      return Math.max(
+        entity.skills["tool_making"] ?? 0,
+        entity.skills["cooking"] ?? 0,
+        entity.skills["gathering"] ?? 0,
+        entity.skills["fishing"] ?? 0,
+      );
     default:
       return 0;
   }
@@ -371,4 +406,50 @@ export function recordAttempt(entity: EntityState, actionType: string, success: 
   entry.attempts++;
   if (success) entry.successes++;
   entity.actionAttempts[actionType] = entry;
+}
+
+// ── Invention Parsing ─────────────────────────────────────────
+
+/**
+ * Validate and sanitize an inventionDef from LLM output.
+ * Returns undefined if the definition is invalid or missing.
+ */
+function parseInventionDef(raw: any): InventionDef | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  if (!raw.id || typeof raw.id !== "string") return undefined;
+  if (!raw.name || typeof raw.name !== "string") return undefined;
+  if (!raw.inputs || typeof raw.inputs !== "object") return undefined;
+  if (!raw.outputs || typeof raw.outputs !== "object") return undefined;
+
+  // Validate inputs are all positive numbers
+  const inputs: Record<string, number> = {};
+  for (const [k, v] of Object.entries(raw.inputs)) {
+    const n = Number(v);
+    if (isNaN(n) || n <= 0) continue;
+    inputs[k] = Math.round(n);
+  }
+  if (Object.keys(inputs).length === 0) return undefined;
+
+  // Validate outputs are all positive numbers, cap at 5 per item
+  const outputs: Record<string, number> = {};
+  for (const [k, v] of Object.entries(raw.outputs)) {
+    const n = Number(v);
+    if (isNaN(n) || n <= 0) continue;
+    outputs[k] = Math.min(5, Math.round(n)); // Cap at 5 to prevent OP inventions
+  }
+  if (Object.keys(outputs).length === 0) return undefined;
+
+  // Sanitize ID to snake_case
+  const id = raw.id.replace(/[^a-z0-9_]/g, "").substring(0, 30);
+  if (id.length === 0) return undefined;
+
+  return {
+    id,
+    name: String(raw.name).substring(0, 50),
+    description: typeof raw.description === "string" ? raw.description.substring(0, 200) : "",
+    inputs,
+    outputs,
+    requiredSkill: typeof raw.requiredSkill === "string" ? raw.requiredSkill : undefined,
+    skillGainType: typeof raw.skillGainType === "string" ? raw.skillGainType : undefined,
+  };
 }

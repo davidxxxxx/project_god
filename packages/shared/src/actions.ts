@@ -36,7 +36,9 @@ export type ActionType =
   // Phase 3: Exploration actions
   | "scout"
   // Phase 3: Creative actions
-  | "experiment";
+  | "experiment"
+  // Phase 4: Emergent invention
+  | "invent";
 
 // ─── ActionIntent ────────────────────────────────────────────
 // agent-runtime produces these. It is a REQUEST, not a mutation.
@@ -53,6 +55,8 @@ export interface ActionIntent {
   readonly confidence?: number;
   /** Agent's self-reported reason. Debug only. */
   readonly reason?: string;
+  /** Free-form description for 'invent' actions (sent to World Arbiter). */
+  readonly description?: string;
 }
 
 // ─── Validated / Rejected ────────────────────────────────────

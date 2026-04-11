@@ -91,6 +91,8 @@ export interface ActionPlanStep {
   recipeId?: string;
   /** Optional item ID for build. */
   itemId?: string;
+  /** Free-form description for 'invent' actions. */
+  description?: string;
   /** Human-readable reason for this step. */
   reason: string;
 }
@@ -480,4 +482,11 @@ export interface WorldState {
   /** Tracks which tiles have ever been seen by any agent.
    *  Key = tileKey "x,y", value = true if explored. */
   exploredTiles?: Record<string, boolean>;
+
+  // ── Emergent Inventions (Phase 4) ─────────────────────────
+
+  /** Dynamic recipes created by agents via the World Arbiter LLM.
+   *  Key = inventionId, value = InventionDef.
+   *  Persisted across saves for cross-generation transmission. */
+  inventions?: Record<string, import("./arbiter").InventionDef>;
 }

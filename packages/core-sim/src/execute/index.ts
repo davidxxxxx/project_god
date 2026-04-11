@@ -1,4 +1,4 @@
-import { ValidatedAction, WorldState, SimEvent, EntityState, manhattan } from "@project-god/shared";
+import { ValidatedAction, WorldState, SimEvent, EntityState, manhattan, InventionDef } from "@project-god/shared";
 import type { GenericGameEvent, ArbiterJudgment } from "@project-god/shared";
 import { isArbitrableAction, deterministicFallback } from "@project-god/shared";
 import { judgeAction, recordAttempt } from "@project-god/agent-runtime";
@@ -96,6 +96,11 @@ export function executeAction(
 
     case "experiment":
       return executeExperiment(action, world);
+
+    // ── Phase 4: Emergent Invention ───────────────────────────
+
+    case "invent":
+      return executeInvent(action, world);
 
     default:
       return [];
@@ -556,4 +561,164 @@ function storeJudgmentMemory(
   if (entity.episodicMemory.length > MAX_EPISODIC) {
     entity.episodicMemory = entity.episodicMemory.slice(-MAX_EPISODIC);
   }
+}
+
+// ── Phase 4: Emergent Invention Execution ─────────────────────
+
+/**
+ * Execute an 'invent' action.
+ *
+ * Flow:
+ * 1. Build context from agent's description + inventory + existing inventions
+ * 2. Send to World Arbiter for physical plausibility judgment
+ * 3. If approved with inventionDef:
+ *    a. Validate agent has required inputs
+ *    b. Persist inventionDef to world.inventions
+ *    c. Add to agent's knownRecipes
+ *    d. Consume inputs, produce outputs
+ *    e. Emit INVENTION_CREATED event
+ * 4. If rejected: emit EXPERIMENT_ATTEMPTED with failure narrative
+ */
+function executeInvent(
+  action: ValidatedAction,
+  world: WorldState,
+): SimEvent[] {
+  const events: SimEvent[] = [];
+  const actor = world.entities[action.intent.actorId] as EntityState;
+  if (!actor?.alive) return events;
+
+  const description = action.intent.description ?? "unknown idea";
+
+  // Gather existing invention IDs to prevent duplicates
+  const existingInventions = Object.keys(world.inventions ?? {});
+
+  const ctx: ArbiterActionContext = {
+    inventory: { ...actor.inventory },
+    inventionDescription: description,
+    existingInventions,
+    timeOfDay: world.environment?.timeOfDay,
+    isCold: world.environment ? world.environment.temperature < 40 : false,
+  };
+
+  const judgment = judgeAction(actor, "invent", ctx, world.tick);
+
+  if (judgment.success && judgment.inventionDef) {
+    const def = judgment.inventionDef;
+
+    // Check for duplicate invention ID
+    if (world.inventions?.[def.id]) {
+      // Already exists — agent "rediscovers" it, just learns the recipe
+      if (!actor.knownRecipes) actor.knownRecipes = {};
+      if (actor.knownRecipes[def.id] === undefined) {
+        actor.knownRecipes[def.id] = 0;
+        events.push({
+          type: "SKILL_LEARNED",
+          tick: world.tick,
+          entityId: actor.id,
+          message: `${actor.name ?? actor.id} independently discovers ${def.name}!`,
+          detail: judgment.narrative,
+        } as GenericGameEvent);
+      }
+      recordAttempt(actor, "invent", true);
+      storeJudgmentMemory(actor, judgment, world.tick);
+      return events;
+    }
+
+    // Validate agent has required input materials
+    let hasAllInputs = true;
+    for (const [item, qty] of Object.entries(def.inputs)) {
+      if ((actor.inventory[item] ?? 0) < qty) {
+        hasAllInputs = false;
+        break;
+      }
+    }
+
+    if (!hasAllInputs) {
+      // Arbiter approved but agent doesn't have exact materials — partial success
+      events.push({
+        type: "EXPERIMENT_ATTEMPTED",
+        tick: world.tick,
+        entityId: actor.id,
+        message: `${actor.name ?? actor.id} has an idea for ${def.name} but lacks materials`,
+        detail: `Needs: ${Object.entries(def.inputs).map(([k, v]) => `${k}:${v}`).join(", ")}. ${judgment.narrative}`,
+      } as GenericGameEvent);
+
+      // Still learn the recipe concept (can use it later when they have materials)
+      if (!actor.knownRecipes) actor.knownRecipes = {};
+      actor.knownRecipes[def.id] = 0;
+
+      // Persist the invention definition
+      if (!world.inventions) world.inventions = {};
+      def.inventedBy = actor.name ?? actor.id;
+      def.inventedAtTick = world.tick;
+      world.inventions[def.id] = def;
+
+      recordAttempt(actor, "invent", true);
+      if (def.skillGainType) {
+        applySkillGain(actor, def.skillGainType, judgment.skillGain);
+      }
+      storeJudgmentMemory(actor, judgment, world.tick);
+      return events;
+    }
+
+    // === Full success: consume inputs → produce outputs → persist ===
+
+    // Consume inputs
+    for (const [item, qty] of Object.entries(def.inputs)) {
+      actor.inventory[item] = (actor.inventory[item] ?? 0) - qty;
+      if (actor.inventory[item] <= 0) delete actor.inventory[item];
+    }
+
+    // Produce outputs
+    for (const [item, qty] of Object.entries(def.outputs)) {
+      actor.inventory[item] = (actor.inventory[item] ?? 0) + qty;
+    }
+
+    // Persist invention to world
+    if (!world.inventions) world.inventions = {};
+    def.inventedBy = actor.name ?? actor.id;
+    def.inventedAtTick = world.tick;
+    world.inventions[def.id] = def;
+
+    // Teach recipe to inventor
+    if (!actor.knownRecipes) actor.knownRecipes = {};
+    actor.knownRecipes[def.id] = 1; // 1 = first successful use
+
+    // Skill gain
+    if (def.skillGainType) {
+      applySkillGain(actor, def.skillGainType, judgment.skillGain);
+    }
+    applySkillGain(actor, "tool_making", judgment.skillGain * 0.5);
+
+    // Emit INVENTION_CREATED event
+    events.push({
+      type: "INVENTION_CREATED",
+      tick: world.tick,
+      entityId: actor.id,
+      message: `🔧 ${actor.name ?? actor.id} invents "${def.name}"! ${def.description}`,
+      detail: judgment.narrative,
+    } as GenericGameEvent);
+
+    console.log(
+      `[Invention] 🔧 ${actor.name ?? actor.id} invented "${def.name}" ` +
+      `(${Object.entries(def.inputs).map(([k, v]) => `${k}:${v}`).join("+")} → ` +
+      `${Object.entries(def.outputs).map(([k, v]) => `${k}:${v}`).join("+")})`,
+    );
+
+  } else {
+    // Failed or no inventionDef
+    events.push({
+      type: "EXPERIMENT_ATTEMPTED",
+      tick: world.tick,
+      entityId: actor.id,
+      message: `${actor.name ?? actor.id} tries to invent "${description}" but fails — ${judgment.outcome}`,
+      detail: judgment.narrative,
+    } as GenericGameEvent);
+  }
+
+  recordAttempt(actor, "invent", judgment.success);
+  actor.lastArbiterJudgment = judgment;
+  storeJudgmentMemory(actor, judgment, world.tick);
+
+  return events;
 }

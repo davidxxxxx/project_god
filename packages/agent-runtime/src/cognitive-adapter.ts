@@ -386,6 +386,11 @@ Exploration:
 
 Creative:
 20. experiment — try combining items in new ways (may discover recipe)
+21. invent(description) — propose a NOVEL technique or tool that doesn't exist yet
+    Example: invent("weave grass into a basket for carrying more items")
+    Example: invent("use vine and branch to make a fish trap")
+    The World Arbiter judges if it's physically plausible for the Stone Age.
+    If approved, you learn a new permanent recipe!
 
 == Structures You Can Build ==
 fire_pit (stone:2, wood:1), lean_to (wood:2, grass:2), hut (wood:6, grass:3, stone:2)
@@ -400,7 +405,7 @@ IMPORTANT: Respond with ONLY valid JSON, no other text. Plan 3-5 steps ahead.
   "thought": "1-2 sentence inner monologue in first person, reflecting your personality",
   "emotion": "one of: calm, anxious, curious, content, afraid, angry, grieving, hopeful, determined",
   "plan": [
-    { "type": "action_type", "targetId": "optional_target", "position": {"x":0,"y":0}, "recipeId": "optional_recipe", "reason": "why" },
+    { "type": "action_type", "targetId": "optional_target", "position": {"x":0,"y":0}, "recipeId": "optional_recipe", "description": "for_invent_actions_only", "reason": "why" },
     ...more steps...
   ],
   "goal": "your current personal goal (only change if situation demands it)"
