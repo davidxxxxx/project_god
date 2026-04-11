@@ -118,10 +118,11 @@ export class CognitiveAdapter {
     snapshot: AgentSnapshot,
     currentTick: number,
     recentActions: { action: string; result: string }[] = [],
+    worldEntities?: Record<string, EntityState>,
   ): Promise<CognitiveResponse | null> {
     if (!this.isEnabled()) return null;
 
-    const prompt = this.buildPrompt(entity, snapshot, recentActions);
+    const prompt = this.buildPrompt(entity, snapshot, recentActions, worldEntities);
 
     _pendingCalls++;
     try {
@@ -178,6 +179,7 @@ export class CognitiveAdapter {
     entity: EntityState,
     snapshot: AgentSnapshot,
     recentActions: { action: string; result: string }[],
+    worldEntities?: Record<string, EntityState>,
   ): string {
     const name = entity.name ?? entity.id;
     const age = entity.age ?? 0;
@@ -211,6 +213,95 @@ export class CognitiveAdapter {
       .map(([k, v]) => `${k} (${Math.round(v * 100)}%)`)
       .join(", ") || "none";
 
+    // ── Family context ──────────────────────────────────────
+    const manhattan = (a: {x: number, y: number}, b: {x: number, y: number}) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+    const familyLines: string[] = [];
+    const entities = worldEntities ?? {};
+
+    // Parents
+    if (entity.parentIds && entity.parentIds.length > 0) {
+      for (const pid of entity.parentIds) {
+        const parent = entities[pid as string];
+        if (parent) {
+          const parentName = parent.name ?? pid;
+          const parentSex = parent.sex === "female" ? "mother" : "father";
+          if (parent.alive) {
+            const dist = manhattan(entity.position, parent.position);
+            familyLines.push(`Your ${parentSex}: ${parentName} (age ${parent.age ?? "?"}, ${dist <= 2 ? "nearby" : "far away"})`);
+          } else {
+            familyLines.push(`Your ${parentSex}: ${parentName} (deceased — you remember them)`);
+          }
+        }
+      }
+    }
+
+    // Spouse
+    if (entity.spouseId) {
+      const spouse = entities[entity.spouseId as string];
+      if (spouse) {
+        const spouseName = spouse.name ?? entity.spouseId;
+        familyLines.push(spouse.alive
+          ? `Your partner: ${spouseName} (age ${spouse.age ?? "?"})`
+          : `Your partner: ${spouseName} (deceased)`);
+      }
+    }
+
+    // Children
+    if (entity.childIds && entity.childIds.length > 0) {
+      for (const cid of entity.childIds) {
+        const child = entities[cid as string];
+        if (child && child.alive) {
+          const childName = child.name ?? cid;
+          familyLines.push(`Your child: ${childName} (age ${child.age ?? "?"})`);
+        }
+      }
+    }
+
+    // Siblings (other children of the same parents)
+    if (entity.parentIds && entity.parentIds.length > 0) {
+      const siblings: string[] = [];
+      for (const ent of Object.values(entities)) {
+        if (ent.id === entity.id || !ent.alive) continue;
+        if (ent.parentIds && entity.parentIds.some(pid => (ent.parentIds as any[]).includes(pid))) {
+          siblings.push(`${ent.name ?? ent.id} (age ${ent.age ?? "?"})`);
+        }
+      }
+      if (siblings.length > 0) {
+        familyLines.push(`Your sibling(s): ${siblings.join(", ")}`);
+      }
+    }
+
+    const familySection = familyLines.length > 0
+      ? `\n== Your Family ==\n  ${familyLines.join("\n  ")}`
+      : "";
+
+    // ── Life stage context ──────────────────────────────────
+    const isAdolescent = entity.statuses?.includes("child") && age >= 10;
+    const hasDeadParent = entity.parentIds?.some(pid => {
+      const parent = entities[pid as string];
+      return parent && !parent.alive;
+    }) ?? false;
+    const isOrphan = entity.parentIds?.every(pid => {
+      const parent = entities[pid as string];
+      return !parent || !parent.alive;
+    }) ?? false;
+
+    let lifeStage = "";
+    if (isAdolescent) {
+      if (isOrphan) {
+        lifeStage = `\nYou are an orphaned adolescent (age ${age}). Both your parents are gone. You must be brave and independent. You feel a mix of grief and determination. The tribe is your family now.`;
+      } else if (hasDeadParent) {
+        lifeStage = `\nYou are an adolescent (age ${age}) who has lost a parent. This loss has shaped you — you feel a need to protect your remaining family. You are growing up faster than others.`;
+      } else {
+        lifeStage = `\nYou are an adolescent (age ${age}). You are curious and eager to learn from your parents. You stay near your family but are starting to help gather food, observe skills, and form your own opinions. You want to make your parents proud.`;
+      }
+    } else if (entity.childIds && entity.childIds.length > 0) {
+      const aliveChildren = entity.childIds.filter(cid => entities[cid as string]?.alive).length;
+      if (aliveChildren > 0) {
+        lifeStage = `\nYou are a parent of ${aliveChildren} child${aliveChildren > 1 ? "ren" : ""}. Protecting and feeding your family is your highest priority.`;
+      }
+    }
+
     // Nearby resources
     const resources = snapshot.nearbyResources.slice(0, 8).map((r) =>
       `${r.resourceType} at (${r.position.x},${r.position.y}) [qty:${Math.round(r.quantity)}]`
@@ -242,17 +333,11 @@ export class CognitiveAdapter {
       `Tried: ${a.action} → ${a.result}`
     ).join("\n  ") || "no actions yet";
 
-    // Life stage context for adolescents
-    const isAdolescent = entity.statuses?.includes("child") && (entity.age ?? 0) >= 10;
-    const lifeStage = isAdolescent
-      ? `\nYou are an adolescent (age ${age}). You are curious and eager to learn. You stay near your tribe but are starting to help gather food, observe skills, and form your own opinions. You look up to adults and want to prove yourself.`
-      : "";
-
     return `You are ${name}, a ${age}-year-old ${sex} person in the Stone Age.
 
 Your personality: ${mbti} — ${traitDesc}
 Your current emotion: ${emotion}
-Your current goal: ${goal}${lifeStage}
+Your current goal: ${goal}${lifeStage}${familySection}
 
 == Your Body ==
 HP: ${hp}/100  Hunger: ${hunger}/100  Thirst: ${thirst}/100

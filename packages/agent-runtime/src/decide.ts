@@ -233,7 +233,7 @@ export async function runCognitivePhase(
   const promises = candidates.map(async ({ entity, snapshot }) => {
     const history = _recentEntityActions.get(entity.id) ?? [];
     try {
-      const response = await _adapter!.runCognition(entity, snapshot, world.tick, history);
+      const response = await _adapter!.runCognition(entity, snapshot, world.tick, history, world.entities as Record<string, EntityState>);
       if (response) {
         entity.innerThought = response.thought;
         entity.emotion = response.emotion;

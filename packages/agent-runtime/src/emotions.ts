@@ -26,6 +26,7 @@ export function deriveEmotion(
   recentBuildSuccess: boolean = false,
   recentActionRejected: boolean = false,
   seesUnknownTerrain: boolean = false,
+  isOrphan: boolean = false,
 ): EmotionType {
   const hp = entity.needs.hp ?? 100;
   const hunger = entity.needs.hunger ?? 100;
@@ -36,6 +37,9 @@ export function deriveEmotion(
 
   // Priority 2: Grief (nearby death)
   if (recentDeathNearby) return "grieving";
+
+  // Priority 2.5: Orphan grief (lost parent — persistent sadness)
+  if (isOrphan && entity.statuses?.includes("child")) return "grieving";
 
   // Priority 3: Severe deprivation
   if (hunger <= 15 || thirst <= 15) return "anxious";
@@ -78,6 +82,7 @@ export function updateEmotion(
   recentBuildSuccess: boolean = false,
   recentActionRejected: boolean = false,
   seesUnknownTerrain: boolean = false,
+  isOrphan: boolean = false,
 ): void {
   // Don't override LLM-set emotions within 10 ticks of a cognitive tick
   if (
@@ -100,5 +105,6 @@ export function updateEmotion(
     recentBuildSuccess,
     recentActionRejected,
     seesUnknownTerrain,
+    isOrphan,
   );
 }
