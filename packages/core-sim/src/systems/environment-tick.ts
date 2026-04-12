@@ -41,8 +41,8 @@ const NIGHT_START = 0.50;
 
 // ── Season System (P1) ──────────────────────────────────────
 
-/** How many ticks in one full year (matches lifecycle.json TICKS_PER_YEAR). */
-const TICKS_PER_YEAR = 40;
+/** How many ticks in one full year (10 days = 400 ticks). Matches lifecycle.json. */
+const TICKS_PER_YEAR = 400;
 
 type Season = "spring" | "summer" | "autumn" | "winter";
 
