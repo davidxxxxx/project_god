@@ -83,7 +83,10 @@ export type SimEventType =
   // SIMA-2: Hierarchical Planning + Divine Vision
   | "MILESTONE_COMPLETED"
   | "OBJECTIVE_CHANGED"
-  | "DIVINE_VISION_RECEIVED";
+  | "DIVINE_VISION_RECEIVED"
+  // P1: Seasons + Spoilage
+  | "ITEM_SPOILED"
+  | "SEASON_CHANGED";
 
 // ─── Per-Type Payloads ───────────────────────────────────────
 
@@ -609,7 +612,8 @@ export interface GenericGameEvent {
   readonly type: "SOCIAL_INTERACTION" | "ITEM_GIFTED" | "TRADE_COMPLETED"
     | "ITEM_CRAFTED" | "AREA_SCOUTED" | "EXPERIMENT_ATTEMPTED"
     | "INVENTION_CREATED" | "SKILL_LEARNED"
-    | "MILESTONE_COMPLETED" | "OBJECTIVE_CHANGED" | "DIVINE_VISION_RECEIVED";
+    | "MILESTONE_COMPLETED" | "OBJECTIVE_CHANGED" | "DIVINE_VISION_RECEIVED"
+    | "ITEM_SPOILED" | "SEASON_CHANGED" | "ENVIRONMENT_CHANGED";
   readonly tick: number;
   readonly entityId: EntityId;
   readonly message: string;

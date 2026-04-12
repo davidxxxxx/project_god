@@ -1,8 +1,8 @@
 /**
  * environment-tick.ts — Per-tick world environment update.
  *
- * Calculates temperature, time-of-day (4 phases), and light level
- * using a sinusoidal day/night cycle.
+ * Calculates temperature, time-of-day (4 phases), seasonal variation,
+ * and light level using sinusoidal day/night + seasonal cycles.
  *
  * Day/Night 4-phase cycle (40 ticks):
  *   dawn:  tick  0- 3 (10%) — sunrise, light ramps up
@@ -10,15 +10,19 @@
  *   dusk:  tick 18-19 ( 5%) — sunset, light ramps down
  *   night: tick 20-39 (50%) — moonlight only
  *
- * Temperature model:
- *   temperature = 42.5 + 17.5 * sin(2π * tick / dayLength)
- *   → Day peak  ≈ 60  (comfortable)
- *   → Night low ≈ 25  (cold, exposure risk)
+ * Seasonal cycle (1 year = 40 ticks = 1 day length):
+ *   spring: ticks 0-9   (+5°C offset, 1.3x resource regen)
+ *   summer: ticks 10-19 (+10°C offset, 1.5x resource regen)
+ *   autumn: ticks 20-29 (-5°C offset, 0.8x resource regen)
+ *   winter: ticks 30-39 (-15°C offset, 0.2x resource regen)
  *
- * Cold threshold: temperature < 40
+ * Temperature model:
+ *   base = 42.5 + 17.5 * sin(2π * tick / dayLength)
+ *   final = clamp(base + seasonOffset, 5, 75)
  */
 
 import { WorldState, EnvironmentState, SimEvent, TimeOfDay, EnvironmentChangedEvent } from "@project-god/shared";
+import type { GenericGameEvent } from "@project-god/shared";
 
 /** Day/night cycle length in ticks. */
 export const DEFAULT_DAY_LENGTH = 40;
@@ -34,7 +38,35 @@ const DAWN_END = 0.10;
 const DUSK_START = 0.45;
 /** Dusk ends / Night starts at this fraction (50%). */
 const NIGHT_START = 0.50;
-// Night runs from 0.50 to 1.00, then wraps to dawn at 0.00
+
+// ── Season System (P1) ──────────────────────────────────────
+
+/** How many ticks in one full year (matches lifecycle.json TICKS_PER_YEAR). */
+const TICKS_PER_YEAR = 40;
+
+type Season = "spring" | "summer" | "autumn" | "winter";
+
+/** Season definitions: temperature offset and resource regen multiplier. */
+const SEASON_CONFIG: Record<Season, { tempOffset: number; regenMultiplier: number }> = {
+  spring: { tempOffset: 5,   regenMultiplier: 1.3 },
+  summer: { tempOffset: 10,  regenMultiplier: 1.5 },
+  autumn: { tempOffset: -5,  regenMultiplier: 0.8 },
+  winter: { tempOffset: -15, regenMultiplier: 0.2 },
+};
+
+/** Season order within a year (4 equal quarters). */
+const SEASON_ORDER: Season[] = ["spring", "summer", "autumn", "winter"];
+
+/**
+ * Determine current season from world tick.
+ * Each season lasts TICKS_PER_YEAR / 4 ticks.
+ */
+export function calculateSeason(tick: number): Season {
+  const ticksPerSeason = Math.max(1, Math.floor(TICKS_PER_YEAR / 4));
+  const yearTick = tick % TICKS_PER_YEAR;
+  const seasonIndex = Math.min(3, Math.floor(yearTick / ticksPerSeason));
+  return SEASON_ORDER[seasonIndex];
+}
 
 /**
  * Calculate temperature for a given tick using a sinusoidal curve.
@@ -47,11 +79,6 @@ export function calculateTemperature(tick: number, dayLength: number): number {
 
 /**
  * Determine time of day from the cycle phase (4 phases).
- *
- * Phase 0.00–0.10: dawn  (sunrise)
- * Phase 0.10–0.45: day   (full sun)
- * Phase 0.45–0.50: dusk  (sunset)
- * Phase 0.50–1.00: night (moonlight)
  */
 export function calculateTimeOfDay(tick: number, dayLength: number): TimeOfDay {
   const phase = (tick % dayLength) / dayLength;
@@ -64,31 +91,21 @@ export function calculateTimeOfDay(tick: number, dayLength: number): TimeOfDay {
 
 /**
  * Calculate continuous light level (0.0 = pitch black, 1.0 = full sun).
- *
- * Smoothly transitions between phases:
- * - dawn:  ramps 0.15 → 1.0
- * - day:   stays 1.0
- * - dusk:  ramps 1.0 → 0.15
- * - night: stays 0.15 (faint moonlight, never fully black)
  */
 export function calculateLightLevel(tick: number, dayLength: number): number {
   const phase = (tick % dayLength) / dayLength;
 
   if (phase < DAWN_END) {
-    // Dawn: ramp from 0.15 to 1.0
-    const t = phase / DAWN_END; // 0→1 across dawn
+    const t = phase / DAWN_END;
     return 0.15 + 0.85 * t;
   }
   if (phase < DUSK_START) {
-    // Day: full sun
     return 1.0;
   }
   if (phase < NIGHT_START) {
-    // Dusk: ramp from 1.0 to 0.15
-    const t = (phase - DUSK_START) / (NIGHT_START - DUSK_START); // 0→1 across dusk
+    const t = (phase - DUSK_START) / (NIGHT_START - DUSK_START);
     return 1.0 - 0.85 * t;
   }
-  // Night: dim moonlight
   return 0.15;
 }
 
@@ -110,6 +127,8 @@ export function getVisionRadius(timeOfDay: TimeOfDay): number {
 /**
  * Update world.environment each tick.
  * Emits ENVIRONMENT_CHANGED when timeOfDay transitions.
+ * P1: Also computes season, applies seasonal temperature offset,
+ *     and sets regenMultiplier for resource node tick.
  */
 export function tickEnvironment(world: WorldState): SimEvent[] {
   const events: SimEvent[] = [];
@@ -118,23 +137,46 @@ export function tickEnvironment(world: WorldState): SimEvent[] {
 
   const { dayLength } = world.environment;
   const prevTimeOfDay = world.environment.timeOfDay;
+  const prevSeason = world.environment.season;
 
-  const newTemperature = calculateTemperature(world.tick, dayLength);
+  // ── Day/night cycle ───────────────────────────────────────
+  const baseTemperature = calculateTemperature(world.tick, dayLength);
   const newTimeOfDay = calculateTimeOfDay(world.tick, dayLength);
   const newLightLevel = calculateLightLevel(world.tick, dayLength);
 
-  world.environment.temperature = newTemperature;
+  // ── Season calculation ────────────────────────────────────
+  const newSeason = calculateSeason(world.tick);
+  const seasonCfg = SEASON_CONFIG[newSeason];
+
+  // Apply seasonal temperature offset, clamped to [5, 75]
+  const finalTemperature = Math.max(5, Math.min(75, baseTemperature + seasonCfg.tempOffset));
+
+  world.environment.temperature = finalTemperature;
   world.environment.timeOfDay = newTimeOfDay;
   world.environment.lightLevel = newLightLevel;
+  world.environment.season = newSeason;
+  world.environment.seasonTempOffset = seasonCfg.tempOffset;
+  world.environment.seasonRegenMultiplier = seasonCfg.regenMultiplier;
 
-  // Only emit event on transition
+  // Emit time-of-day transition event
   if (newTimeOfDay !== prevTimeOfDay) {
     events.push({
       type: "ENVIRONMENT_CHANGED",
       tick: world.tick,
-      temperature: newTemperature,
+      temperature: finalTemperature,
       timeOfDay: newTimeOfDay,
     } as EnvironmentChangedEvent);
+  }
+
+  // Emit season transition event
+  if (newSeason !== prevSeason && prevSeason !== undefined) {
+    events.push({
+      type: "ENVIRONMENT_CHANGED",
+      tick: world.tick,
+      entityId: "",
+      message: `The season has changed to ${newSeason}! (temp offset: ${seasonCfg.tempOffset > 0 ? '+' : ''}${seasonCfg.tempOffset}°C, resource regen: ${seasonCfg.regenMultiplier}x)`,
+    } as GenericGameEvent);
+    console.log(`[Season] 🌿 ${prevSeason} → ${newSeason} (temp ${seasonCfg.tempOffset > 0 ? '+' : ''}${seasonCfg.tempOffset}°C, regen ${seasonCfg.regenMultiplier}x)`);
   }
 
   return events;

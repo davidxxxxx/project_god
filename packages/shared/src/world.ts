@@ -484,6 +484,12 @@ export interface EnvironmentState {
   readonly dayLength: number;
   /** Continuous light level 0.0 (pitch black) to 1.0 (full sun). */
   lightLevel: number;
+  /** Current season (P1: seasons system). */
+  season?: "spring" | "summer" | "autumn" | "winter";
+  /** Season temperature offset (P1: applied on top of daily cycle). */
+  seasonTempOffset?: number;
+  /** Season resource regen multiplier (P1: 0.0=dead, 1.0=normal, 1.5=bountiful). */
+  seasonRegenMultiplier?: number;
 }
 
 // ─── World State ─────────────────────────────────────────────

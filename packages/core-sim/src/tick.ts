@@ -20,6 +20,7 @@ import {
   ActionRejectedEvent,
   TickResult,
   EntityState,
+  StructureState,
 } from "@project-god/shared";
 import type { GenericGameEvent } from "@project-god/shared";
 import { decayNeeds, checkDeaths } from "./systems/decay-needs";
@@ -100,13 +101,18 @@ export function tickWorld(
   // ── 3. Check deaths ──────────────────────────────────────
   events.push(...checkDeaths(world, ctx.needs));
 
-  // ── 4. Regenerate resource nodes ─────────────────────────
+  // ── 4. Regenerate resource nodes (P1: seasonal multiplier) ──
+  const seasonRegenMult = world.environment?.seasonRegenMultiplier ?? 1.0;
   for (const node of Object.values(world.resourceNodes)) {
     if (node.maxQuantity < 0) continue;
     if (node.quantity < node.maxQuantity) {
-      node.quantity = Math.min(node.maxQuantity, node.quantity + node.regenPerTick);
+      const seasonalRegen = node.regenPerTick * seasonRegenMult;
+      node.quantity = Math.min(node.maxQuantity, node.quantity + seasonalRegen);
     }
   }
+
+  // ── 4.4. Food spoilage in inventory (P1) ──────────────────
+  events.push(...tickFoodSpoilage(world, ctx.resources, ctx.structures));
 
   // ── 4.5. Tick structures (fuel decay + warming) ──────────
   if (ctx.structures) {
@@ -236,6 +242,88 @@ function deliverDivineVisions(world: WorldState): SimEvent[] {
   // Remove delivered visions (reverse order to preserve indices)
   for (let i = toRemove.length - 1; i >= 0; i--) {
     queue.splice(toRemove[i], 1);
+  }
+
+  return events;
+}
+
+// ── P1: Food Spoilage System ──────────────────────────────────
+
+/** How often spoilage is checked (every N ticks). */
+const SPOILAGE_CHECK_INTERVAL = 5;
+
+/**
+ * Tick food spoilage in entity inventories.
+ *
+ * - Items with spoilRate > 0 have a chance to spoil each check
+ * - Entities near 'food_preservation' structures are protected
+ * - Deterministic: uses tick + entity position as seed
+ * - Emits events for agent learning ("my fish spoiled!")
+ */
+function tickFoodSpoilage(
+  world: WorldState,
+  resources: Record<string, import("./content-types").ResourceDef>,
+  structures?: Record<string, import("./content-types").StructureDef>
+): SimEvent[] {
+  if (world.tick % SPOILAGE_CHECK_INTERVAL !== 0) return [];
+
+  const events: SimEvent[] = [];
+
+  // Pre-compute food_preservation structure positions
+  const preservationPositions: { position: { x: number; y: number }; radius: number }[] = [];
+  if (world.structures && structures) {
+    for (const s of Object.values(world.structures) as StructureState[]) {
+      if (!s.active) continue;
+      const def = structures[s.type];
+      if (def?.effects?.includes("food_preservation")) {
+        preservationPositions.push({
+          position: s.position,
+          radius: def.effectRadius,
+        });
+      }
+    }
+  }
+
+  for (const entity of Object.values(world.entities) as EntityState[]) {
+    if (!entity.alive) continue;
+
+    // Check if entity is near a food_preservation structure
+    const isPreserved = preservationPositions.some((p) => {
+      const dist = Math.abs(entity.position.x - p.position.x) + Math.abs(entity.position.y - p.position.y);
+      return dist <= p.radius;
+    });
+    if (isPreserved) continue; // Protected — skip spoilage
+
+    // Check each inventory item
+    const spoiledItems: string[] = [];
+    for (const [itemType, qty] of Object.entries(entity.inventory)) {
+      if (qty <= 0) continue;
+      const def = resources[itemType];
+      if (!def?.spoilRate || def.spoilRate <= 0) continue;
+
+      // Deterministic spoilage roll per item type
+      const seed = (world.tick * 41 + entity.position.x * 19 + entity.position.y * 23
+        + itemType.charCodeAt(0) * 7) % 100;
+      const spoilChance = def.spoilRate * SPOILAGE_CHECK_INTERVAL * 100; // Scale to percentage
+
+      if (seed < spoilChance) {
+        // Spoil 1 unit
+        entity.inventory[itemType] = qty - 1;
+        if (entity.inventory[itemType] <= 0) {
+          delete entity.inventory[itemType];
+        }
+        spoiledItems.push(itemType);
+      }
+    }
+
+    if (spoiledItems.length > 0) {
+      events.push({
+        type: "ITEM_SPOILED",
+        tick: world.tick,
+        entityId: entity.id,
+        message: `${entity.name ?? entity.id}'s ${spoiledItems.join(", ")} spoiled!`,
+      } as GenericGameEvent);
+    }
   }
 
   return events;

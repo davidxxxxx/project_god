@@ -1,0 +1,35 @@
+{
+  "_doc": "Season configuration. Defines temperature offset and resource regen multiplier per season.",
+  "TICKS_PER_YEAR": 40,
+  "seasons": {
+    "spring": {
+      "displayName": "Spring",
+      "tempOffset": 5,
+      "regenMultiplier": 1.3,
+      "_comment": "Warm, abundant. Plants begin to grow. Good foraging."
+    },
+    "summer": {
+      "displayName": "Summer",
+      "tempOffset": 10,
+      "regenMultiplier": 1.5,
+      "_comment": "Hot, peak abundance. Berries plentiful, water may dry slightly."
+    },
+    "autumn": {
+      "displayName": "Autumn",
+      "tempOffset": -5,
+      "regenMultiplier": 0.8,
+      "_comment": "Cooling, declining. Time to stockpile food before winter."
+    },
+    "winter": {
+      "displayName": "Winter",
+      "tempOffset": -15,
+      "regenMultiplier": 0.2,
+      "_comment": "Cold, scarce. Berry bushes barely produce. Exposure risk high. Must rely on stored food."
+    }
+  },
+  "spoilage": {
+    "CHECK_INTERVAL_TICKS": 5,
+    "preservationEffects": ["food_preservation"],
+    "_comment": "Items with spoilRate > 0 are checked every CHECK_INTERVAL ticks. Near food_preservation structures = immune."
+  }
+}
