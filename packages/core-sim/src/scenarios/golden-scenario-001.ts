@@ -151,7 +151,8 @@ const RECIPES = {
 };
 
 // MVP-04: Lifecycle configuration
-import type { LifecycleDef, FaithDef } from "../content-types";
+import type { LifecycleDef, FaithDef, FaunaDef } from "../content-types";
+import faunaData from "../../../content-data/data/fauna.json";
 const LIFECYCLE: LifecycleDef = {
   TICKS_PER_YEAR: 800, ADULTHOOD_AGE: 13, ELDER_AGE_RATIO: 0.75,
   DEFAULT_MAX_AGE: 50, MAX_AGE_VARIANCE: 10, BIRTH_COOLDOWN_YEARS: 4,
@@ -172,10 +173,15 @@ const FAITH: FaithDef = {
   RAIN_WATER_RESTORE: 50, BOUNTY_BERRY_RESTORE: 20,
 };
 
+// P2: Fauna definitions (filter out meta keys starting with _)
+const FAUNA: Record<string, FaunaDef> = Object.fromEntries(
+  Object.entries(faunaData).filter(([k]) => !k.startsWith("_"))
+) as any;
+
 export const GOLDEN_TICK_CONTEXT: TickContext = {
   needs: NEEDS, resources: RESOURCES, actions: ACTIONS, terrain: TERRAIN,
   structures: STRUCTURES, skills: SKILLS, technologies: TECHNOLOGIES,
-  lifecycle: LIFECYCLE, faith: FAITH, recipes: RECIPES,
+  lifecycle: LIFECYCLE, faith: FAITH, recipes: RECIPES, fauna: FAUNA,
 };
 
 export const GOLDEN_NEEDS_CONFIG = {

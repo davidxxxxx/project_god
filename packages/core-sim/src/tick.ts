@@ -34,11 +34,12 @@ import { tickSpiritual } from "./systems/spiritual-tick";
 import { tickDoctrine } from "./systems/doctrine-tick";
 import { socialDynamicsTick } from "./systems/social-dynamics-tick";
 import { diplomacyTick } from "./systems/diplomacy-tick";
+import { faunaTick } from "./systems/fauna-tick";
 import { computeFogOfWar } from "./systems/fog-of-war";
 import { validateAction, type ValidationContext } from "./validate";
 import { executeAction, type ExecutionContext } from "./execute";
 import { recordActionResult } from "@project-god/agent-runtime";
-import type { NeedDef, ResourceDef, ActionDef, TerrainDef, StructureDef, SkillDef, TechnologyDef, LifecycleDef, FaithDef, RecipeDef } from "./content-types";
+import type { NeedDef, ResourceDef, ActionDef, TerrainDef, StructureDef, SkillDef, TechnologyDef, LifecycleDef, FaithDef, RecipeDef, FaunaDef } from "./content-types";
 
 export interface TickContext {
   needs: Record<string, NeedDef>;
@@ -57,6 +58,8 @@ export interface TickContext {
   faith?: FaithDef;
   /** Recipe definitions for cooking/crafting. Optional for backward compat. (MVP-02X) */
   recipes?: Record<string, RecipeDef>;
+  /** Fauna species definitions for ecology system. Optional. (P2) */
+  fauna?: Record<string, FaunaDef>;
 }
 
 export function tickWorld(
@@ -139,9 +142,14 @@ export function tickWorld(
   // ── 4.9. Cross-tribe diplomacy (encounters + territory) ──
   events.push(...diplomacyTick(world));
 
+  // ── 4.10. Fauna tick (animal AI + spawn + combat + breed) ──
+  if (ctx.fauna) {
+    events.push(...faunaTick(world, ctx.fauna));
+  }
+
   // ── 5+6. Validate and execute ────────────────────────────
   const valCtx: ValidationContext = { actions: ctx.actions, terrain: ctx.terrain, structures: ctx.structures, skills: ctx.skills, faith: ctx.faith, resources: ctx.resources, recipes: ctx.recipes };
-  const exeCtx: ExecutionContext = { resources: ctx.resources, needs: ctx.needs, structures: ctx.structures, skills: ctx.skills, faith: ctx.faith, recipes: ctx.recipes, terrain: ctx.terrain };
+  const exeCtx: ExecutionContext = { resources: ctx.resources, needs: ctx.needs, structures: ctx.structures, skills: ctx.skills, faith: ctx.faith, recipes: ctx.recipes, terrain: ctx.terrain, fauna: ctx.fauna };
 
   for (const intent of intents) {
     const outcome = validateAction(intent, world, valCtx);

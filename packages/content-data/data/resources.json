@@ -150,5 +150,55 @@
     "regenPerTick": 0,
     "category": "tool",
     "_doc": "Crafted from clay. Used for storage and cooking."
+  },
+
+  "hide": {
+    "displayName": "Animal Hide",
+    "gatherAmount": 0,
+    "restoresNeed": {},
+    "maxQuantity": 0,
+    "regenPerTick": 0,
+    "category": "material",
+    "_doc": "Dropped by deer, wolf, bear. Used for armor crafting."
+  },
+  "fang": {
+    "displayName": "Beast Fang",
+    "gatherAmount": 0,
+    "restoresNeed": {},
+    "maxQuantity": 0,
+    "regenPerTick": 0,
+    "category": "material",
+    "_doc": "Dropped by wolf and bear. Used for weapon crafting."
+  },
+
+  "spear": {
+    "displayName": "Spear",
+    "gatherAmount": 0,
+    "restoresNeed": {},
+    "maxQuantity": 0,
+    "regenPerTick": 0,
+    "category": "weapon",
+    "weaponBonus": 8,
+    "_doc": "Best melee weapon. Crafted from fang + wood + stone."
+  },
+  "club": {
+    "displayName": "Wooden Club",
+    "gatherAmount": 0,
+    "restoresNeed": {},
+    "maxQuantity": 0,
+    "regenPerTick": 0,
+    "category": "weapon",
+    "weaponBonus": 5,
+    "_doc": "Simple weapon. Crafted from wood."
+  },
+  "hide_armor": {
+    "displayName": "Hide Armor",
+    "gatherAmount": 0,
+    "restoresNeed": {},
+    "maxQuantity": 0,
+    "regenPerTick": 0,
+    "category": "armor",
+    "armorBonus": 5,
+    "_doc": "Basic armor. Crafted from animal hides."
   }
 }

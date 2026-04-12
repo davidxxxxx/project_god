@@ -38,7 +38,9 @@ export type ActionType =
   // Phase 3: Creative actions
   | "experiment"
   // Phase 4: Emergent invention
-  | "invent";
+  | "invent"
+  // P2: Ecology + Combat
+  | "hunt";
 
 // ─── ActionIntent ────────────────────────────────────────────
 // agent-runtime produces these. It is a REQUEST, not a mutation.
@@ -57,6 +59,8 @@ export interface ActionIntent {
   readonly reason?: string;
   /** Free-form description for 'invent' actions (sent to World Arbiter). */
   readonly description?: string;
+  /** Target entity ID for hunt/attack actions (P2). */
+  readonly targetEntityId?: string;
 }
 
 // ─── Validated / Rejected ────────────────────────────────────

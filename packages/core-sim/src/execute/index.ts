@@ -3,7 +3,7 @@ import type { GenericGameEvent, ArbiterJudgment } from "@project-god/shared";
 import { isArbitrableAction, deterministicFallback } from "@project-god/shared";
 import { judgeAction, recordAttempt } from "@project-god/agent-runtime";
 import type { ArbiterActionContext } from "@project-god/agent-runtime";
-import type { ResourceDef, NeedDef, StructureDef, SkillDef, RecipeDef, TerrainDef } from "../content-types";
+import type { ResourceDef, NeedDef, StructureDef, SkillDef, RecipeDef, TerrainDef, FaunaDef } from "../content-types";
 import { executeMove } from "./execute-move";
 import { executeGather } from "./execute-gather";
 import { executeConsume } from "./execute-consume";
@@ -16,6 +16,7 @@ import { executeCook } from "./execute-cook";
 import { executeFuel } from "./execute-fuel";
 import { executePlant } from "./execute-plant";
 import { executeWade } from "./execute-wade";
+import { executeHunt } from "./execute-hunt";
 
 export interface ExecutionContext {
   resources: Record<string, ResourceDef>;
@@ -27,6 +28,8 @@ export interface ExecutionContext {
   recipes?: Record<string, RecipeDef>;
   /** Terrain definitions for movement cost. MVP-02Y. */
   terrain?: Record<string, TerrainDef>;
+  /** Fauna definitions for hunt loot. P2. */
+  fauna?: Record<string, FaunaDef>;
 }
 
 export function executeAction(
@@ -101,6 +104,13 @@ export function executeAction(
 
     case "invent":
       return executeInvent(action, world);
+
+    // ── P2: Hunting ─────────────────────────────────────────
+
+    case "hunt": {
+      const targetId = action.intent.targetEntityId ?? "";
+      return executeHunt(action.intent.actorId, targetId, world, ctx.fauna ?? {});
+    }
 
     default:
       return [];

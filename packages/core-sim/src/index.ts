@@ -26,3 +26,7 @@ export { computeFogOfWar } from "./systems/fog-of-war";
 export type { FogState } from "./systems/fog-of-war";
 export { VISION_RADIUS, getVisionRadius, calculateLightLevel } from "./systems/environment-tick";
 export { diplomacyTick } from "./systems/diplomacy-tick";
+export { faunaTick } from "./systems/fauna-tick";
+export { resolveCombat, applyCombatResult } from "./systems/combat";
+export type { CombatResult } from "./systems/combat";
+export type { FaunaDef } from "./content-types";

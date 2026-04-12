@@ -86,7 +86,13 @@ export type SimEventType =
   | "DIVINE_VISION_RECEIVED"
   // P1: Seasons + Spoilage
   | "ITEM_SPOILED"
-  | "SEASON_CHANGED";
+  | "SEASON_CHANGED"
+  // P2: Ecology + Combat
+  | "ANIMAL_SPAWNED"
+  | "COMBAT_HIT"
+  | "ANIMAL_KILLED"
+  | "HUNT_SUCCESS"
+  | "EXTINCTION_RESPAWN";
 
 // ─── Per-Type Payloads ───────────────────────────────────────
 
@@ -613,7 +619,8 @@ export interface GenericGameEvent {
     | "ITEM_CRAFTED" | "AREA_SCOUTED" | "EXPERIMENT_ATTEMPTED"
     | "INVENTION_CREATED" | "SKILL_LEARNED"
     | "MILESTONE_COMPLETED" | "OBJECTIVE_CHANGED" | "DIVINE_VISION_RECEIVED"
-    | "ITEM_SPOILED" | "SEASON_CHANGED" | "ENVIRONMENT_CHANGED";
+    | "ITEM_SPOILED" | "SEASON_CHANGED" | "ENVIRONMENT_CHANGED"
+    | "ANIMAL_SPAWNED" | "COMBAT_HIT" | "ANIMAL_KILLED" | "HUNT_SUCCESS" | "EXTINCTION_RESPAWN";
   readonly tick: number;
   readonly entityId: EntityId;
   readonly message: string;

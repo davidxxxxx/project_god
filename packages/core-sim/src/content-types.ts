@@ -150,3 +150,40 @@ export interface FaithDef {
   RAIN_WATER_RESTORE: number;
   BOUNTY_BERRY_RESTORE: number;
 }
+
+/** Fauna species definition. Loaded from fauna.json. */
+export interface FaunaDef {
+  displayName: string;
+  /** Ecological tier. */
+  tier: "prey" | "herd" | "predator" | "apex";
+  /** Base hit points. */
+  hp: number;
+  /** Base attack power (0 = cannot fight). */
+  attack: number;
+  /** Base defense (damage reduction). */
+  defense: number;
+  /** Movement speed in tiles per tick (1 or 2). */
+  speed: number;
+  /** Aggro behavior type. */
+  aggroType: "flee" | "herd_retaliate" | "hunt_weak" | "territorial";
+  /** Detection radius for threats/prey. */
+  detectionRadius: number;
+  /** Distance a fleeing animal runs before stopping. */
+  fleeRadius: number;
+  /** Max chase distance before giving up. */
+  leashRadius: number;
+  /** Items dropped on death. */
+  drops: Record<string, number>;
+  /** Resource types this animal eats. */
+  diet: string[];
+  /** Min/max herd size on spawn [min, max]. */
+  herdSize: [number, number];
+  /** Biomes where this animal can spawn. */
+  spawnBiome: string[];
+  /** Seasonal spawn weight multipliers. */
+  spawnWeight: Record<string, number>;
+  /** Per-tick probability of breeding (requires ≥2 same species). */
+  breedChance: number;
+  /** Max population across the entire map. */
+  maxPopulation: number;
+}

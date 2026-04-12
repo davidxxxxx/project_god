@@ -11,6 +11,7 @@ import { validateHarvest } from "./validate-harvest";
 import { validateCook } from "./validate-cook";
 import { validatePlant } from "./validate-plant";
 import { validateWade } from "./validate-wade";
+import { validateHunt } from "./validate-hunt";
 
 export interface ValidationContext {
   actions: Record<string, ActionDef>;
@@ -209,6 +210,11 @@ export function validateAction(
       }
       return { kind: "validated", intent, energyCost: 3, timeCost: 4 };
     }
+
+    // ── P2: Hunting ──────────────────────────────────────────
+
+    case "hunt":
+      return validateHunt(intent, world);
 
     default:
       return { kind: "rejected", intent, reason: `Action '${intent.type}' not implemented` };
