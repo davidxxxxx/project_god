@@ -13,7 +13,10 @@ export function executeGather(
   if (!node || node.quantity <= 0) return [];
 
   const resDef = resources[node.resourceType];
-  const gatherAmount = resDef?.gatherAmount ?? 1;
+  const baseGatherAmount = resDef?.gatherAmount ?? 1;
+  // P0: Tool bonus — stone_tool in inventory grants +50% gather
+  const hasToolBonus = (entity.inventory["stone_tool"] ?? 0) > 0;
+  const gatherAmount = hasToolBonus ? Math.ceil(baseGatherAmount * 1.5) : baseGatherAmount;
   // Clamp to both node supply and remaining inventory capacity
   const capacity = entity.inventoryCapacity ?? 10;
   const currentTotal = Object.values(entity.inventory).reduce((sum, qty) => sum + qty, 0);

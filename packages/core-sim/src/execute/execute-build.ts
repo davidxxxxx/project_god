@@ -47,15 +47,22 @@ export function executeBuild(
   }
 
   // ── 2. Create structure ───────────────────────────────────
+  // P0: Skill proficiency increases building durability
+  const reqSkill = def.requiresSkill;
+  const builderProf = reqSkill ? (entity.skills?.[reqSkill] ?? 0) : 0;
+  // Proficiency multiplier: 0→1.0x, 0.5→1.25x, 1.0→1.5x
+  const durabilityMultiplier = 1.0 + (builderProf * 0.5);
+
   const structureId = `struct_${structureCounter++}` as StructureId;
   const structure: StructureState = {
     id: structureId,
     type: structureType,
     position: { ...entity.position },
-    durability: def.initialDurability,
+    durability: Math.round(def.initialDurability * durabilityMultiplier),
     builtByEntityId: entity.id,
     builtAtTick: world.tick,
     active: true,
+    tribeId: entity.tribeId, // P0: ownership tracking
   };
 
   // ── 3. Add to world ───────────────────────────────────────

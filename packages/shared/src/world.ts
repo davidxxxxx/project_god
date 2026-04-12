@@ -147,6 +147,8 @@ export interface StructureState {
   readonly builtByEntityId: EntityId;
   readonly builtAtTick: number;
   active: boolean;
+  /** Tribe that owns this structure (P0: ownership tracking). */
+  tribeId?: string;
 }
 
 // ─── Task Memory (working memory) ────────────────────────────

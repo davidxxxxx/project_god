@@ -107,9 +107,11 @@ export function tickSkillLearning(
 
       if (hasNearbyTeacher && hasNearbyStructure) {
         // Increment observation counter
+        // P0: learning_boost from School doubles observation speed
+        const learningMultiplier = learner.attributes["learning_boost"] ?? 1;
         const key = obsKey(skillId);
         const current = learner.attributes[key] ?? 0;
-        const newCount = current + 1;
+        const newCount = current + learningMultiplier;
         learner.attributes[key] = newCount;
 
         if (newCount >= skillDef.learnTicks) {

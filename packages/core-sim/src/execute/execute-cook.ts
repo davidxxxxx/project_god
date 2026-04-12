@@ -25,6 +25,39 @@ export function executeCook(
   const recipe = recipeDefs[recipeId];
   if (!recipe) return events;
 
+  // P0: Skill proficiency affects cooking output
+  const cookingSkill = recipe.requiredSkill
+    ? (entity.skills?.[recipe.requiredSkill] ?? 0)
+    : 0.5; // No required skill → baseline success
+
+  // Low skill (<0.3) has 20% chance to waste materials
+  // Use deterministic seed: tick + entity position
+  if (cookingSkill < 0.3) {
+    const failSeed = (world.tick * 37 + entity.position.x * 11 + entity.position.y * 7) % 100;
+    if (failSeed < 20) {
+      // Consume inputs but produce nothing
+      for (const [itemType, qty] of Object.entries(recipe.inputs)) {
+        entity.inventory[itemType] = (entity.inventory[itemType] ?? 0) - qty;
+        if (entity.inventory[itemType] <= 0) delete entity.inventory[itemType];
+      }
+      // Still gain skill from failure (learning from mistakes)
+      if (recipe.requiredSkill && recipe.skillGainOnCraft > 0) {
+        if (!entity.skills) entity.skills = {};
+        const current = entity.skills[recipe.requiredSkill] ?? 0;
+        entity.skills[recipe.requiredSkill] = Math.min(1.0, current + recipe.skillGainOnCraft * 0.5);
+      }
+      events.push({
+        type: "RESOURCE_COOKED",
+        tick: world.tick,
+        entityId: entity.id,
+        recipeId,
+        outputType: "failed",
+        amount: 0,
+      } as ResourceCookedEvent);
+      return events;
+    }
+  }
+
   // Consume inputs
   for (const [itemType, qty] of Object.entries(recipe.inputs)) {
     entity.inventory[itemType] = (entity.inventory[itemType] ?? 0) - qty;
@@ -33,9 +66,10 @@ export function executeCook(
     }
   }
 
-  // Produce outputs
+  // Produce outputs — high skill (>=0.7) gives bonus output
+  const bonusMultiplier = cookingSkill >= 0.7 ? 2 : 1;
   for (const [itemType, qty] of Object.entries(recipe.outputs)) {
-    entity.inventory[itemType] = (entity.inventory[itemType] ?? 0) + qty;
+    entity.inventory[itemType] = (entity.inventory[itemType] ?? 0) + (qty * bonusMultiplier);
   }
 
   // Skill gain

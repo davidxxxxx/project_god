@@ -91,7 +91,10 @@ export function perceive(
   const self = world.entities[entityId];
   // Dynamic vision radius based on time of day
   const timeOfDay: TimeOfDay = world.environment?.timeOfDay ?? "day";
-  const effectiveRadius = radius ?? VISION_RADIUS_MAP[timeOfDay];
+  // P0: vision_boost from Watchtower overrides base vision radius
+  const baseRadius = VISION_RADIUS_MAP[timeOfDay];
+  const boostRadius = self.attributes?.["vision_boost"] ?? 0;
+  const effectiveRadius = radius ?? Math.max(baseRadius, boostRadius);
 
   // ── Visible resources ─────────────────────────────────────
   const nearbyResources = Object.values(world.resourceNodes).filter(

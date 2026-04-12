@@ -111,8 +111,14 @@ export function tickFaith(
   // ── Divine points regeneration ──────────────────────────
   if (prayingCount > 0 && world.divinePoints !== undefined) {
     const maxDP = world.maxDivinePoints ?? faithCfg.DIVINE_POINTS_MAX;
-    const regen = prayingCount * faithCfg.DIVINE_REGEN_PER_PRAYER;
-    world.divinePoints = Math.min(maxDP, world.divinePoints + regen);
+    // P0: faith_multiplier from Temple amplifies each prayer's contribution
+    let totalRegen = 0;
+    for (const entity of Object.values(world.entities) as EntityState[]) {
+      if (!entity.alive || !entity.isPraying) continue;
+      const multiplier = entity.attributes["faith_multiplier"] ?? 1;
+      totalRegen += faithCfg.DIVINE_REGEN_PER_PRAYER * multiplier;
+    }
+    world.divinePoints = Math.min(maxDP, world.divinePoints + totalRegen);
   }
 
   return events;
