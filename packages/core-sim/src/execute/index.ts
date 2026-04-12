@@ -338,13 +338,56 @@ function executeTrade(action: ValidatedAction, world: WorldState): SimEvent[] {
     lastTopic: "trade",
   };
 
+  const events: SimEvent[] = [];
+
+  // P3: Cross-tribe trade updates diplomatic relations
+  if (actor.tribeId && target.tribeId && actor.tribeId !== target.tribeId) {
+    // Find both tribes and update diplomacy
+    if (world.tribes) {
+      const actorTribe = (world.tribes as any)[actor.tribeId];
+      const targetTribe = (world.tribes as any)[target.tribeId];
+
+      if (actorTribe && targetTribe) {
+        // Initialize diplomacy if needed
+        if (!actorTribe.diplomacy) actorTribe.diplomacy = {};
+        if (!targetTribe.diplomacy) targetTribe.diplomacy = {};
+
+        const initDiplo = (tribe: any, otherTribeId: string) => {
+          if (!tribe.diplomacy[otherTribeId]) {
+            tribe.diplomacy[otherTribeId] = {
+              tribeId: otherTribeId,
+              hostility: 0,
+              tradeCount: 0,
+              conflictCount: 0,
+              status: "neutral",
+              lastInteractionTick: world.tick,
+            };
+          }
+        };
+
+        initDiplo(actorTribe, target.tribeId);
+        initDiplo(targetTribe, actor.tribeId);
+
+        // Trade reduces hostility and increments trade count
+        actorTribe.diplomacy[target.tribeId].hostility = Math.max(-1, actorTribe.diplomacy[target.tribeId].hostility - 0.05);
+        actorTribe.diplomacy[target.tribeId].tradeCount++;
+        actorTribe.diplomacy[target.tribeId].lastInteractionTick = world.tick;
+
+        targetTribe.diplomacy[actor.tribeId].hostility = Math.max(-1, targetTribe.diplomacy[actor.tribeId].hostility - 0.05);
+        targetTribe.diplomacy[actor.tribeId].tradeCount++;
+        targetTribe.diplomacy[actor.tribeId].lastInteractionTick = world.tick;
+      }
+    }
+  }
+
   const evt: GenericGameEvent = {
     type: "TRADE_COMPLETED",
     tick: world.tick,
     entityId: actor.id,
-    message: `${actor.name ?? actor.id} trades ${actorGiveItem} for ${targetGiveItem} with ${target.name ?? target.id}`,
+    message: `${actor.name ?? actor.id} trades ${actorGiveItem} for ${targetGiveItem} with ${target.name ?? target.id}${actor.tribeId !== target.tribeId ? " (cross-tribe!)" : ""}`,
   };
-  return [evt];
+  events.push(evt);
+  return events;
 }
 
 /** Craft: arbiter-judged crafting with success/failure. Phase 5 enhanced. */

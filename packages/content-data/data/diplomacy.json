@@ -1,0 +1,27 @@
+{
+  "_doc": "Cross-tribe diplomacy configuration. Tunable parameters for encounter detection, hostility, and territory.",
+  "ENCOUNTER_RADIUS": 3,
+  "DIPLOMACY_TICK_INTERVAL": 5,
+  "hostilityDeltas": {
+    "trade": -0.05,
+    "gift": -0.08,
+    "encounter": -0.01,
+    "territory_overlap": 0.03,
+    "scarcity_near_other": 0.02,
+    "decay_rate": 0.002,
+    "_comment": "Negative = friendlier. Trades and gifts reduce hostility. Territory overlap increases it."
+  },
+  "territory": {
+    "BASE_RADIUS": 5,
+    "RADIUS_PER_STRUCTURE": 1,
+    "MAX_RADIUS": 15,
+    "_comment": "Territory center = centroid of tribe structures. Radius grows with buildings."
+  },
+  "statusThresholds": {
+    "allied": -0.5,
+    "friendly": -0.2,
+    "neutral_upper": 0.2,
+    "hostile": 0.5,
+    "_comment": "hostility <= threshold = that status. Above 0.5 = war."
+  }
+}

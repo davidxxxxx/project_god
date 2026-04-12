@@ -25,3 +25,4 @@ export type { DivineIntent } from "./systems/divine-intent";
 export { computeFogOfWar } from "./systems/fog-of-war";
 export type { FogState } from "./systems/fog-of-war";
 export { VISION_RADIUS, getVisionRadius, calculateLightLevel } from "./systems/environment-tick";
+export { diplomacyTick } from "./systems/diplomacy-tick";

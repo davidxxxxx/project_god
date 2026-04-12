@@ -33,6 +33,7 @@ import { tickFaith } from "./systems/faith-tick";
 import { tickSpiritual } from "./systems/spiritual-tick";
 import { tickDoctrine } from "./systems/doctrine-tick";
 import { socialDynamicsTick } from "./systems/social-dynamics-tick";
+import { diplomacyTick } from "./systems/diplomacy-tick";
 import { computeFogOfWar } from "./systems/fog-of-war";
 import { validateAction, type ValidationContext } from "./validate";
 import { executeAction, type ExecutionContext } from "./execute";
@@ -134,6 +135,9 @@ export function tickWorld(
 
   // ── 4.8. Social dynamics (leader + tension + split) ──────
   events.push(...socialDynamicsTick(world));
+
+  // ── 4.9. Cross-tribe diplomacy (encounters + territory) ──
+  events.push(...diplomacyTick(world));
 
   // ── 5+6. Validate and execute ────────────────────────────
   const valCtx: ValidationContext = { actions: ctx.actions, terrain: ctx.terrain, structures: ctx.structures, skills: ctx.skills, faith: ctx.faith, resources: ctx.resources, recipes: ctx.recipes };

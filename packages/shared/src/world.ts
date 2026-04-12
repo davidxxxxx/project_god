@@ -450,6 +450,31 @@ export interface TribeState {
   avgHunger?: number;
   /** Average tribe thirst (0-100). Updated each tick. */
   avgThirst?: number;
+
+  // ── P3: Cross-Tribe Diplomacy ──────────────────────────────
+
+  /** Diplomatic relations with other tribes. Key = other tribe ID. */
+  diplomacy?: Record<string, TribeDiplomacy>;
+  /** Approximate territorial center (centroid of buildings). */
+  territoryCenter?: Vec2;
+  /** Territorial radius (based on number of structures). */
+  territoryRadius?: number;
+}
+
+/** P3: Diplomatic relation between two tribes. */
+export interface TribeDiplomacy {
+  /** Other tribe's ID. */
+  tribeId: string;
+  /** Hostility level: -1.0 (ally) to +1.0 (enemy). 0 = neutral. */
+  hostility: number;
+  /** Total successful trades between tribes. */
+  tradeCount: number;
+  /** Total hostile encounters. */
+  conflictCount: number;
+  /** Current diplomatic status. */
+  status: "unknown" | "neutral" | "friendly" | "allied" | "hostile" | "war";
+  /** Last tick when tribes interacted. */
+  lastInteractionTick: number;
 }
 
 // ─── Doctrine (MVP-07B: tribal beliefs and taboos) ───────────
