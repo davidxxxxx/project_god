@@ -1,8 +1,8 @@
 {
-  "TICKS_PER_YEAR": 400,
-  "ADULTHOOD_AGE": 15,
+  "TICKS_PER_YEAR": 800,
+  "ADULTHOOD_AGE": 13,
   "ELDER_AGE_RATIO": 0.75,
-  "DEFAULT_MAX_AGE": 70,
+  "DEFAULT_MAX_AGE": 50,
   "MAX_AGE_VARIANCE": 10,
   "BIRTH_COOLDOWN_YEARS": 4,
   "MIN_BIRTH_HUNGER": 40,
@@ -11,9 +11,11 @@
   "PAIRING_MIN_AGE": 16,
   "ATTRIBUTE_MUTATION_RANGE": 2,
   "_comments": {
-    "TICKS_PER_YEAR": "10 day/night cycles = 1 life year (400 ticks).",
-    "ELDER_AGE_RATIO": "Entity becomes elder at 75% of maxAge.",
-    "BIRTH_COOLDOWN_YEARS": "Minimum years between births for same couple.",
+    "TICKS_PER_YEAR": "20 day/night cycles = 1 life year (800 ticks). 1 season = 5 days = 200 ticks.",
+    "ADULTHOOD_AGE": "Agent becomes adult at 13, starts working and eligible for LLM cognition.",
+    "DEFAULT_MAX_AGE": "Stone age realistic lifespan. ±10 variance → range 40-60.",
+    "ELDER_AGE_RATIO": "Entity becomes elder at 75% of maxAge (~37 years).",
+    "BIRTH_COOLDOWN_YEARS": "Minimum years between births for same couple. 4 years = 3200 ticks = 80 days.",
     "ATTRIBUTE_MUTATION_RANGE": "Child attributes = avg(parents) ± this value."
   }
 }

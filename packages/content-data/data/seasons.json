@@ -1,5 +1,5 @@
   "_doc": "Season configuration. Defines temperature offset and resource regen multiplier per season.",
-  "TICKS_PER_YEAR": 400,
+  "TICKS_PER_YEAR": 800,
   "seasons": {
     "spring": {
       "displayName": "Spring",

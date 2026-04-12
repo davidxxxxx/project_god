@@ -120,10 +120,11 @@ export function createWorld(config: WorldConfig): WorldState {
 
     // ── MVP-04: Lifecycle fields for Gen0 ──────────────────
     const sex = rng.next() < 0.5 ? "male" : "female";
-    const maxAge = rng.nextInt(60, 80);
-    const startAge = rng.nextInt(20, 30);
+    const maxAge = rng.nextInt(40, 60); // Stone age lifespan (DEFAULT_MAX_AGE=50 ± 10)
+    const startAge = rng.nextInt(18, 28);
     // bornAtTick is negative (entity "existed before" world started)
-    const bornAtTick = -(startAge * 40); // 40 = DEFAULT_DAY_LENGTH = TICKS_PER_YEAR
+    // TICKS_PER_YEAR = 800 (20 days per year)
+    const bornAtTick = -(startAge * 800);
 
     // Phase 1: Generate random MBTI personality for Gen0 entities
     const personality: Personality = {

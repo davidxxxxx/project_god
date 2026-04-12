@@ -15,7 +15,7 @@ import type { GenericGameEvent } from "@project-god/shared";
 // ── Configuration ────────────────────────────────────────────
 
 /** How often to re-elect leader (in ticks). */
-const ELECTION_INTERVAL = 40; // ~1 year
+const ELECTION_INTERVAL = 800; // 1 year (TICKS_PER_YEAR)
 
 /** Hunger/thirst threshold below which agents feel scarcity. */
 const SCARCITY_THRESHOLD = 35;
