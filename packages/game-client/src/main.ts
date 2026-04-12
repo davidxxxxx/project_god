@@ -777,6 +777,27 @@ function bindOracleForm() {
       return;
     }
 
+    // ── SIMA-2: Divine Vision (strategic commands) ────────────
+    if (localIntent.type === "vision") {
+      const world = runner.getWorld();
+      const VISION_COST = 2;
+      if ((world.divinePoints ?? 0) < VISION_COST) {
+        showSimpleToast(`⚠️ Not enough divine points for vision (need ${VISION_COST}, have ${world.divinePoints ?? 0})`);
+        return;
+      }
+      world.divinePoints = (world.divinePoints ?? 0) - VISION_COST;
+      if (!world.divineVisionQueue) world.divineVisionQueue = [];
+      world.divineVisionQueue.push({
+        message: text,
+        targetEntityId: localIntent.targetId ?? undefined,
+        issuedAtTick: world.tick,
+      });
+      showSimpleToast(`💫 Divine Vision queued: "${text.slice(0, 50)}${text.length > 50 ? '...' : ''}" (cost: ${VISION_COST} DP, delivered at night)`);
+      input.value = "";
+      render();
+      return;
+    }
+
     // ── Fallback: LLM Oracle ──────────────────────────────
     const oracle = narrativeEngine.getOracle();
     if (!oracle) {

@@ -79,7 +79,11 @@ export type SimEventType =
   | "AREA_SCOUTED"
   | "EXPERIMENT_ATTEMPTED"
   // Phase 4: Emergent Invention
-  | "INVENTION_CREATED";
+  | "INVENTION_CREATED"
+  // SIMA-2: Hierarchical Planning + Divine Vision
+  | "MILESTONE_COMPLETED"
+  | "OBJECTIVE_CHANGED"
+  | "DIVINE_VISION_RECEIVED";
 
 // ─── Per-Type Payloads ───────────────────────────────────────
 
@@ -604,7 +608,8 @@ export interface FarBankSpottedEvent {
 export interface GenericGameEvent {
   readonly type: "SOCIAL_INTERACTION" | "ITEM_GIFTED" | "TRADE_COMPLETED"
     | "ITEM_CRAFTED" | "AREA_SCOUTED" | "EXPERIMENT_ATTEMPTED"
-    | "INVENTION_CREATED" | "SKILL_LEARNED";
+    | "INVENTION_CREATED" | "SKILL_LEARNED"
+    | "MILESTONE_COMPLETED" | "OBJECTIVE_CHANGED" | "DIVINE_VISION_RECEIVED";
   readonly tick: number;
   readonly entityId: EntityId;
   readonly message: string;

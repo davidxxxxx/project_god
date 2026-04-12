@@ -1,0 +1,27 @@
+{
+  "_comment": "SIMA-2 Cognitive tuning parameters. All values have defaults in code.",
+
+  "hierarchicalPlanning": {
+    "maxMilestones": 6,
+    "maxPlanStepsPerMilestone": 5,
+    "milestoneFailRetryLimit": 2,
+    "objectiveReplanCooldownTicks": 50
+  },
+
+  "selfImprovement": {
+    "enabled": true,
+    "idleCuriosityThresholds": {
+      "hunger": 60,
+      "thirst": 60
+    },
+    "idleExperimentChance": 0.15,
+    "labNotesMaxDisplay": 5,
+    "curiosityTriggerCooldownTicks": 20
+  },
+
+  "divineVision": {
+    "divineCost": 2,
+    "cooldownTicks": 100,
+    "deliveryTime": "night"
+  }
+}

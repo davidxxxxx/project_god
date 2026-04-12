@@ -97,6 +97,26 @@ export interface ActionPlanStep {
   reason: string;
 }
 
+// ─── Milestone (SIMA-2 Hierarchical Planning) ────────────────
+
+export type MilestoneStatus = "pending" | "active" | "done" | "failed";
+
+/**
+ * A milestone is a sub-goal within a larger objective.
+ * Each milestone decomposes into a short plan of ActionPlanSteps.
+ * Inspired by SIMA 2's hierarchical task decomposition.
+ */
+export interface MilestoneEntry {
+  /** Brief description, e.g. "gather 4 wood". */
+  description: string;
+  /** Current status of this milestone. */
+  status: MilestoneStatus;
+  /** Plan steps for this milestone (filled by LLM on activation). */
+  plan?: ActionPlanStep[];
+  /** Why it failed, if applicable. */
+  failReason?: string;
+}
+
 // ─── Tile ────────────────────────────────────────────────────
 
 export interface TileState {
@@ -369,6 +389,24 @@ export interface EntityState {
   /** Tick when LLM last ran cognition for this agent. */
   lastCognitiveTick?: number;
 
+  // ── SIMA-2: Hierarchical Planning ─────────────────────────
+
+  /** High-level strategic objective. Set by LLM reflection. */
+  objective?: string;
+  /** Milestone decomposition of the objective. */
+  milestones?: MilestoneEntry[];
+  /** Index of the current active milestone. */
+  activeMilestoneIdx?: number;
+
+  // ── SIMA-2: Divine Vision ──────────────────────────────────
+
+  /** Pending divine vision (injected into next cognitive cycle). */
+  divineVision?: {
+    message: string;
+    receivedAtTick: number;
+    processed: boolean;
+  };
+
   // ── Phase 5: World Arbiter ─────────────────────────────────
 
   /** Most recent arbiter judgment (for UI display). */
@@ -489,4 +527,13 @@ export interface WorldState {
    *  Key = inventionId, value = InventionDef.
    *  Persisted across saves for cross-generation transmission. */
   inventions?: Record<string, import("./arbiter").InventionDef>;
+
+  // ── SIMA-2: Divine Vision Queue ────────────────────────────
+
+  /** Queue of divine visions waiting to be delivered to agents at night. */
+  divineVisionQueue?: {
+    message: string;
+    targetEntityId?: string;
+    issuedAtTick: number;
+  }[];
 }

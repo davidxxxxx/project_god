@@ -16,7 +16,7 @@ import type { MiracleType } from "@project-god/shared";
 
 export interface DivineIntent {
   /** What kind of divine action. */
-  type: "miracle" | "doctrine_shift" | "none";
+  type: "miracle" | "doctrine_shift" | "vision" | "none";
   /** If type=miracle, which miracle. */
   miracleType?: MiracleType;
   /** Target entity ID for targeted miracles. */
@@ -93,6 +93,26 @@ export function parseDivineIntent(input: string): DivineIntent {
           reason: `Keyword "${kw}" matched → miracle:${pattern.miracleType}`,
         };
       }
+    }
+  }
+
+  // ── 1.5. Check vision patterns (SIMA-2: strategic commands) ──
+  const VISION_KEYWORDS = [
+    "tell them", "say to", "go to", "go build", "build a", "settle",
+    "explore", "cross the", "move to", "find", "search for",
+    "tell ", "命令", "告诉", "去", "建", "探索", "寻找", "迁移",
+    "定居", "过河", "建立",
+  ];
+  for (const kw of VISION_KEYWORDS) {
+    if (text.includes(kw)) {
+      let targetId: string | undefined;
+      const entityMatch = text.match(/entity_\d+/);
+      if (entityMatch) targetId = entityMatch[0];
+      return {
+        type: "vision",
+        targetId,
+        reason: `Keyword "${kw}" → divine vision command`,
+      };
     }
   }
 

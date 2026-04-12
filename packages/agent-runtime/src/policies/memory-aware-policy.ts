@@ -772,6 +772,29 @@ export function memoryAwarePolicy(
     }
   }
 
+  // ── SIMA-2: Idle Exploration / Self-Improvement ──────────────
+  // Well-fed agents with curious personalities occasionally experiment
+  const hunger = self.needs.hunger ?? 100;
+  const thirst = self.needs.thirst ?? 100;
+  const isIdleWellFed = hunger > 60 && thirst > 60;
+  const isCurious = (self.personality?.sn ?? 0) > 0; // Intuitive types
+
+  if (isIdleWellFed && isCurious && !isChild) {
+    // Count items for experiment eligibility
+    const itemTypes = Object.entries(self.inventory).filter(([_, v]) => v > 0).length;
+    if (itemTypes >= 2) {
+      // Seeded 15% chance to experiment (deterministic from tick + entity position)
+      const seed = (currentTick * 31 + self.position.x * 17 + self.position.y * 13) % 100;
+      if (seed < 15) {
+        clearTask(self);
+        return {
+          actorId, type: "experiment",
+          reason: `[${mbti}] curious and well-fed — experimenting with items`,
+        };
+      }
+    }
+  }
+
   clearTask(self);
   return { actorId, type: "idle", reason: `[${mbti}] idle near tribe` };
 }

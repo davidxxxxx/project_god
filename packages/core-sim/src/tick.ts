@@ -19,7 +19,9 @@ import {
   TimeTickedEvent,
   ActionRejectedEvent,
   TickResult,
+  EntityState,
 } from "@project-god/shared";
+import type { GenericGameEvent } from "@project-god/shared";
 import { decayNeeds, checkDeaths } from "./systems/decay-needs";
 import { tickStructures } from "./systems/structure-tick";
 import { tickSkillLearning } from "./systems/skill-learning";
@@ -70,6 +72,9 @@ export function tickWorld(
 
   // ── 1.5. Update environment (temperature + day/night) ────
   events.push(...tickEnvironment(world));
+
+  // ── 1.55. Deliver divine visions at night ──────────────────
+  events.push(...deliverDivineVisions(world));
 
   // ── 1.6. Update lifecycle (aging + pairing + birth) ────
   if (ctx.lifecycle) {
@@ -154,4 +159,84 @@ export function tickWorld(
   const fogState = computeFogOfWar(world);
 
   return { world, events, accepted, rejections, fogState };
+}
+
+// ── SIMA-2: Divine Vision Delivery System ─────────────────────
+
+/** Per-entity cooldown: 100 ticks between visions. */
+const DIVINE_VISION_COOLDOWN = 100;
+
+/**
+ * Deliver divine visions from the queue to agents during night.
+ * Visions are queued by the player via the Oracle form and delivered
+ * during the night cycle so agents process them in their next cognitive cycle.
+ */
+function deliverDivineVisions(world: WorldState): SimEvent[] {
+  const events: SimEvent[] = [];
+  const queue = world.divineVisionQueue;
+  if (!queue || queue.length === 0) return events;
+
+  // Only deliver at night
+  if (world.environment?.timeOfDay !== "night") return events;
+
+  // Process each queued vision
+  const toRemove: number[] = [];
+
+  for (let i = 0; i < queue.length; i++) {
+    const vision = queue[i];
+
+    // Find target entities
+    const targetIds: string[] = [];
+    if (vision.targetEntityId) {
+      targetIds.push(vision.targetEntityId);
+    } else {
+      // Broadcast to all alive entities
+      for (const eid of Object.keys(world.entities)) {
+        const e = world.entities[eid] as EntityState;
+        if (e.alive) targetIds.push(eid);
+      }
+    }
+
+    let delivered = false;
+
+    for (const eid of targetIds) {
+      const entity = world.entities[eid] as EntityState;
+      if (!entity?.alive) continue;
+
+      // Check cooldown
+      if (entity.divineVision && !entity.divineVision.processed) continue; // Already has unprocessed vision
+      if (entity.divineVision && (world.tick - entity.divineVision.receivedAtTick) < DIVINE_VISION_COOLDOWN) continue;
+
+      // Inject vision
+      entity.divineVision = {
+        message: vision.message,
+        receivedAtTick: world.tick,
+        processed: false,
+      };
+
+      // Force cognitive cycle on next tick
+      entity.lastCognitiveTick = 0;
+
+      events.push({
+        type: "DIVINE_VISION_RECEIVED",
+        tick: world.tick,
+        entityId: entity.id,
+        message: `${entity.name ?? eid} received a divine vision: "${vision.message.slice(0, 50)}..."`,
+      } as GenericGameEvent);
+
+      console.log(`[Divine] 💫 Vision delivered to ${entity.name ?? eid}: "${vision.message.slice(0, 60)}"`);
+      delivered = true;
+    }
+
+    if (delivered) {
+      toRemove.push(i);
+    }
+  }
+
+  // Remove delivered visions (reverse order to preserve indices)
+  for (let i = toRemove.length - 1; i >= 0; i--) {
+    queue.splice(toRemove[i], 1);
+  }
+
+  return events;
 }

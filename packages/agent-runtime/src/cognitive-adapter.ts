@@ -15,7 +15,7 @@
  * - Rate limiting: max 3 concurrent calls across all agents
  */
 
-import type { EntityState, ActionPlanStep, EmotionType } from "@project-god/shared";
+import type { EntityState, ActionPlanStep, EmotionType, MilestoneEntry } from "@project-god/shared";
 import { getMBTICode, EMOTION_EMOJI } from "@project-god/shared";
 import type { AgentSnapshot } from "./perception";
 
@@ -56,6 +56,10 @@ export interface CognitiveResponse {
   emotion: EmotionType;
   plan: ActionPlanStep[];
   goal?: string;
+  /** SIMA-2: High-level strategic objective. */
+  objective?: string;
+  /** SIMA-2: Milestone decomposition of the objective. */
+  milestones?: MilestoneEntry[];
 }
 
 // ── Adapter Class ─────────────────────────────────────────────
@@ -105,6 +109,13 @@ export class CognitiveAdapter {
 
     // Discovery trigger: new terrain/resource
     if (seesNewTerrain && elapsed >= 15) return true;
+
+    // SIMA-2: Idle curiosity — well-fed agent with no plan → creative thinking
+    const isWellFed = (entity.needs.hunger ?? 100) > 60
+                   && (entity.needs.thirst ?? 100) > 60;
+    const hasNoPlan = !entity.actionPlan || entity.actionPlan.length === 0;
+    const isIntuitive = (entity.personality?.sn ?? 0) > 0;
+    if (isWellFed && hasNoPlan && isIntuitive && elapsed >= 20) return true;
 
     return false;
   }
@@ -339,6 +350,12 @@ Your personality: ${mbti} — ${traitDesc}
 Your current emotion: ${emotion}
 Your current goal: ${goal}${lifeStage}${familySection}
 
+== Your Strategic Objective ==
+${entity.objective ? `Current objective: ${entity.objective}` : "No long-term objective yet. Consider setting one."}
+${this.buildMilestoneContext(entity)}
+${this.buildLabNotes(entity)}
+${this.buildDivineVisionPrompt(entity)}
+
 == Your Body ==
 HP: ${hp}/100  Hunger: ${hunger}/100  Thirst: ${thirst}/100
 Inventory: ${inv}
@@ -400,13 +417,18 @@ longhouse (wood:10, stone:4, grass:6), shrine (stone:4, wood:2), temple (stone:8
 == What Happened Recently ==
   ${actionHistory}
 
-IMPORTANT: Respond with ONLY valid JSON, no other text. Plan 3-5 steps ahead.
+IMPORTANT: Respond with ONLY valid JSON, no other text.
 {
   "thought": "1-2 sentence inner monologue in first person, reflecting your personality",
   "emotion": "one of: calm, anxious, curious, content, afraid, angry, grieving, hopeful, determined",
+  "objective": "your HIGH-LEVEL strategic objective (what you want to achieve long-term, e.g. 'build a shelter before nightfall')",
+  "milestones": [
+    { "description": "first sub-goal toward the objective" },
+    { "description": "second sub-goal" }
+  ],
   "plan": [
     { "type": "action_type", "targetId": "optional_target", "position": {"x":0,"y":0}, "recipeId": "optional_recipe", "description": "for_invent_actions_only", "reason": "why" },
-    ...more steps...
+    ...steps for the FIRST/CURRENT milestone only...
   ],
   "goal": "your current personal goal (only change if situation demands it)"
 }`;
@@ -436,13 +458,15 @@ IMPORTANT: Respond with ONLY valid JSON, no other text. Plan 3-5 steps ahead.
       const emotion = this.validateEmotion(parsed.emotion);
       const plan = this.validatePlan(parsed.plan);
       const goal = typeof parsed.goal === "string" ? parsed.goal.slice(0, 100) : undefined;
+      const objective = typeof parsed.objective === "string" ? parsed.objective.slice(0, 150) : undefined;
+      const milestones = this.validateMilestones(parsed.milestones);
 
       if (plan.length === 0) {
         console.warn("[Cognitive] LLM returned empty plan");
         return null;
       }
 
-      return { thought, emotion, plan, goal };
+      return { thought, emotion, plan, goal, objective, milestones };
     } catch (err) {
       console.warn("[Cognitive] Failed to parse LLM JSON:", err);
       return null;
@@ -470,6 +494,8 @@ IMPORTANT: Respond with ONLY valid JSON, no other text. Plan 3-5 steps ahead.
       "craft", "fish",
       // Phase 3: Exploration + Creative
       "scout", "experiment",
+      // Phase 4: Emergent invention
+      "invent",
     ]);
 
     return raw
@@ -484,6 +510,55 @@ IMPORTANT: Respond with ONLY valid JSON, no other text. Plan 3-5 steps ahead.
         recipeId: typeof step.recipeId === "string" ? step.recipeId : undefined,
         itemId: typeof step.itemId === "string" ? step.itemId : undefined,
         reason: typeof step.reason === "string" ? step.reason.slice(0, 100) : "LLM plan step",
+        description: typeof step.description === "string" ? step.description.slice(0, 200) : undefined,
       }));
+  }
+
+  // ── SIMA-2: Milestone Validation ──────────────────────────
+
+  private validateMilestones(raw: any): MilestoneEntry[] | undefined {
+    if (!Array.isArray(raw) || raw.length === 0) return undefined;
+    return raw
+      .filter((m: any) => m && typeof m.description === "string")
+      .slice(0, 6) // Max 6 milestones
+      .map((m: any): MilestoneEntry => ({
+        description: m.description.slice(0, 100),
+        status: "pending",
+      }));
+  }
+
+  // ── SIMA-2: Lab Notes Builder ──────────────────────────────
+
+  private buildLabNotes(entity: EntityState): string {
+    const experiments = (entity.episodicMemory ?? [])
+      .filter(m => m.type === "EXPERIMENT_ATTEMPTED" || m.type === "INVENTION_CREATED")
+      .slice(-5);
+    if (experiments.length === 0) return "";
+    const notes = experiments.map(m =>
+      `- ${m.detail ?? m.type}`,
+    ).join("\n  ");
+    return `\n== Your Lab Notes (past experiments) ==\n  ${notes}\nWhen your needs are met, consider new experiments based on your lab notes.`;
+  }
+
+  // ── SIMA-2: Milestone Context Builder ──────────────────────
+
+  private buildMilestoneContext(entity: EntityState): string {
+    if (!entity.milestones || entity.milestones.length === 0) return "";
+    const idx = entity.activeMilestoneIdx ?? 0;
+    const lines = entity.milestones.map((m, i) => {
+      const marker = i === idx ? "→" : m.status === "done" ? "✓" : m.status === "failed" ? "✗" : " ";
+      return `  ${marker} ${i + 1}. ${m.description} [${m.status}]${m.failReason ? ` (${m.failReason})` : ""}`;
+    }).join("\n");
+    return `\nMilestones:\n${lines}\nFocus your plan on the CURRENT milestone (→). When it's done, the next activates automatically.`;
+  }
+
+  // ── SIMA-2: Divine Vision Prompt ────────────────────────────
+
+  private buildDivineVisionPrompt(entity: EntityState): string {
+    if (!entity.divineVision || entity.divineVision.processed) return "";
+    return `\n== 💫 A Vision From The Gods 💫 ==
+Last night, you dreamed a vivid dream. A divine voice spoke:
+"${entity.divineVision.message}"
+This vision feels important — consider how this divine guidance should influence your objective and milestones.`;
   }
 }

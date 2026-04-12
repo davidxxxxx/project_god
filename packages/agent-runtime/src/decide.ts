@@ -11,8 +11,8 @@
  * NOTE: may mutate entity.currentTask (working memory) as a side effect.
  */
 
-import { ActionIntent, WorldState, EntityState, ActionPlanStep, chebyshev, samePos } from "@project-god/shared";
-import type { Vec2 } from "@project-god/shared";
+import { ActionIntent, WorldState, EntityState, ActionPlanStep, MilestoneEntry, chebyshev, samePos } from "@project-god/shared";
+import type { Vec2, GenericGameEvent, SimEvent } from "@project-god/shared";
 import { perceive } from "./perception";
 import { survivalPolicy, type NeedConfig } from "./policies/survival-policy";
 import { memoryAwarePolicy, type NeedConfig as MemNeedConfig } from "./policies/memory-aware-policy";
@@ -240,9 +240,32 @@ export async function runCognitivePhase(
         entity.emotion = response.emotion;
         entity.actionPlan = response.plan;
         if (response.goal) entity.personalGoal = response.goal;
+
+        // SIMA-2: Apply objective and milestones
+        if (response.objective) {
+          const oldObj = entity.objective;
+          entity.objective = response.objective;
+          if (oldObj !== response.objective) {
+            console.log(`[Cognitive] 🎯 ${entity.name ?? entity.id}: new objective: "${response.objective}"`);
+          }
+        }
+        if (response.milestones && response.milestones.length > 0) {
+          // Set first milestone to active
+          response.milestones[0].status = "active";
+          entity.milestones = response.milestones;
+          entity.activeMilestoneIdx = 0;
+        }
+
+        // SIMA-2: Mark divine vision as processed
+        if (entity.divineVision && !entity.divineVision.processed) {
+          entity.divineVision.processed = true;
+          console.log(`[Divine] 💫 ${entity.name ?? entity.id} processed divine vision`);
+        }
+
         console.log(
           `[Cognitive] ✓ ${entity.name ?? entity.id}: "${response.thought}" | ` +
-          `plan: ${response.plan.length} steps`
+          `plan: ${response.plan.length} steps` +
+          `${response.milestones ? ` | milestones: ${response.milestones.length}` : ""}`
         );
         return true;
       }
@@ -305,6 +328,7 @@ export function decideActionV3(
       // Check for crisis override (softer thresholds)
       if (shouldAbandonPlanForCrisis(entity, step)) {
         entity.actionPlan = [];
+        // SIMA-2: Crisis clears plan but PRESERVES objective + milestones
         _planStuckCounts.delete(entity.id);
         // Fall through to rule-based policy
       } else {
@@ -317,6 +341,20 @@ export function decideActionV3(
           _planStuckCounts.delete(entity.id);
         }
 
+        return intent;
+      }
+    }
+
+    // SIMA-2: Milestone auto-progression when plan exhausted
+    if (entity.milestones && entity.milestones.length > 0) {
+      const advanced = advanceMilestone(entity, world.tick);
+      if (advanced && entity.actionPlan && entity.actionPlan.length > 0) {
+        // New plan generated from next milestone — execute it
+        const step = entity.actionPlan[0];
+        const intent = translatePlanStep(entity, step, world);
+        if (shouldConsumePlanStep(entity, step)) {
+          entity.actionPlan.shift();
+        }
         return intent;
       }
     }
@@ -391,5 +429,59 @@ function checkPendingPlanClear(entity: EntityState): boolean {
     }
     return true;
   }
+  return false;
+}
+
+// ── SIMA-2: Milestone Progression ─────────────────────────────
+
+/**
+ * Advance the milestone system when the current plan is exhausted.
+ *
+ * When the agent's actionPlan is empty:
+ *   1. Mark current milestone as "done"
+ *   2. Find next "pending" milestone → set to "active"
+ *   3. Force a cognitive re-trigger (set lastCognitiveTick = 0)
+ *      so the LLM generates plan steps for the new milestone
+ *   4. If all milestones done → clear objective (mission complete!)
+ *
+ * Returns true if a milestone was advanced.
+ */
+function advanceMilestone(entity: EntityState, currentTick: number): boolean {
+  if (!entity.milestones || entity.milestones.length === 0) return false;
+
+  const idx = entity.activeMilestoneIdx ?? 0;
+  const current = entity.milestones[idx];
+  if (!current || current.status !== "active") return false;
+
+  // Current milestone's plan is exhausted → mark as done
+  if (!entity.actionPlan || entity.actionPlan.length === 0) {
+    current.status = "done";
+    console.log(
+      `[Milestone] ✓ ${entity.name ?? entity.id}: milestone ${idx + 1}/${entity.milestones.length} done: "${current.description}"`
+    );
+
+    // Find next pending milestone
+    const nextIdx = entity.milestones.findIndex((m, i) => i > idx && m.status === "pending");
+    if (nextIdx >= 0) {
+      entity.milestones[nextIdx].status = "active";
+      entity.activeMilestoneIdx = nextIdx;
+      // Force cognitive re-trigger for next milestone
+      entity.lastCognitiveTick = 0;
+      console.log(
+        `[Milestone] → ${entity.name ?? entity.id}: starting milestone ${nextIdx + 1}: "${entity.milestones[nextIdx].description}"`
+      );
+      return true;
+    } else {
+      // All milestones done — objective complete!
+      console.log(
+        `[Milestone] 🎯 ${entity.name ?? entity.id}: ALL milestones complete! Objective achieved: "${entity.objective}"`
+      );
+      entity.objective = undefined;
+      entity.milestones = undefined;
+      entity.activeMilestoneIdx = undefined;
+      return false;
+    }
+  }
+
   return false;
 }
